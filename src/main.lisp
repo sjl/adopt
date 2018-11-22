@@ -51,7 +51,8 @@
   (print-unreadable-object (o stream :type t)
     (format stream "~A ~A/~A" (name% o) (short% o) (long% o))))
 
-(defun make-option (name documentation &key long short parameter initial-value reduce)
+(defun make-option (name documentation &key
+                    long short parameter initial-value reduce)
   (make-instance 'option
     :name name
     :documentation documentation
