@@ -10,7 +10,7 @@ It aims to be simple and powerful enough for the majority of use cases.
 * **Mercurial:** <https://bitbucket.org/sjl/adopt/>
 * **Git:** <https://github.com/sjl/adopt/>
 
-The test suite currently passes in SBCL, CCL, ECL, and ABCL on Debian.  Further
+The test suite currently passes in SBCL, CCL, ECL, and ABCL on Ubuntu.  Further
 testing is welcome.
 
 [Bobbin]: https://github.com/sjl/bobbin
