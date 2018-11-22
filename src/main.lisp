@@ -2,13 +2,36 @@
 
 ;;;; Utils --------------------------------------------------------------------
 (defun append1 (list el)
+  "Append element `el` to the end of `list`.
+
+  This is implemented as `(append list (list el))`.  It is not particularly
+  fast.
+
+  It is useful as a `:reduce` function when you want to collect all values given
+  for an option.
+
+  "
   (append list (list el)))
 
 (defun latest (old new)
+  "Return `new`.
+
+  It is useful as a `:reduce` function when you want to just keep the last-given
+  value for an option.
+
+  "
   (declare (ignore old))
   new)
 
+
 (defun argv ()
+  "Return a list of the program name and command line arguments.
+
+  This is not implemented for every Common Lisp implementation.  You can always
+  pass your own values to `parse-options` and `print-usage` if it's not
+  implemented for your particular Lisp.
+
+  "
   #+sbcl sb-ext:*posix-argv*
   #+ccl ccl:*unprocessed-command-line-arguments*
   #-(or sbcl ccl) (error "ARGV is not supported on this implementation."))
@@ -126,6 +149,17 @@
 
 
 (defun parse-options (interface &optional (arguments (rest (argv))))
+  "Parse `arguments` according to `interface`.
+
+  Two values are returned:
+
+  1. A fresh list of top-level, unaccounted-for arguments that don't correspond
+     to any options defined in `interface`.
+  2. An `EQL` hash map of option `name`s to values.
+
+  See the full usage documentation for more information.
+
+  "
   (let ((toplevel nil)
         (results (make-hash-table)))
     (dolist (option (options interface))
@@ -212,20 +246,19 @@
 
     (print-usage *program-interface* :width 60 :option-width 15)
     ; =>
-    USAGE: /bin/foo [options] FILES
-
-    Options:
-      -v, --verbose    Output extra information.
-      -q, --quiet      Shut up.
-      --ignore FILE    Ignore FILE.  May be specified multiple
-                       times.
-      -n NAME, --name NAME
-                       Your name.  May be specified many times,
-                       last one wins.
-      -m, --meow       Meow.
-
-      0.........10... option-width
-    0........10........20........30........40........50........60 width
+    ; USAGE: /bin/foo [options] FILES
+    ;
+    ; Options:
+    ;   -v, --verbose    Output extra information.
+    ;   -q, --quiet      Shut up.
+    ;   --ignore FILE    Ignore FILE.  May be specified multiple
+    ;                    times.
+    ;   -n NAME, --name NAME
+    ;                    Your name.  May be specified many times,
+    ;                    last one wins.
+    ;   -m, --meow       Meow.
+    ;   0.........1.... option-width
+    ; 0........1.........2.........3.........4.........5.........6
 
   "
   (assert (> width (+ 2 option-width 2)) (width option-width)
@@ -238,45 +271,3 @@
          (doc-width (- width doc-column)))
     (dolist (option (options interface))
       (print-option-usage stream option option-column doc-column doc-width))))
-
-
-;;;; Scratch ------------------------------------------------------------------
-(define-interface *my-program* "[options] FILES"
-  (verbosity
-    "Output extra information."
-    :short #\v
-    :long "verbose"
-    :initial-value 0
-    :reduce (constantly 1))
-  (verbosity
-    "Shut up."
-    :short #\q
-    :long "quiet"
-    :reduce (constantly -1))
-  (ignore
-    "Ignore FILE.  May be specified multiple times."
-    :long "ignore"
-    :parameter "FILE"
-    :reduce #'append1)
-  (name
-    "Your name.  May be specified many times, last one wins."
-    :short #\n
-    :long "name"
-    :parameter "NAME"
-    :reduce #'latest)
-  (meows
-    "Meow."
-    :short #\m
-    :long "meow"
-    :initial-value 0
-    :reduce #'1+))
-
-(pprint
-  (multiple-value-list
-    (parse-options *my-program*
-                   '("-vqn" "steve"
-                     "--meow"
-                     "-m" "--meow" "foo"
-                     "--name=sjl" "more"
-                     "--" "--ignore" "bar"
-                     ))))

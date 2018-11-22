@@ -1,0 +1,17 @@
+Installation
+============
+
+Adopt is compatible with Quicklisp, but not *in* Quicklisp (yet?).  You can
+clone the repository into your [Quicklisp local-projects directory][local] for
+now.
+
+The `adopt` system contains the core API and depends on [Bobbin][] and
+[split-sequence][].
+
+The `adopt.test` system contains the test suite, which uses depends on some
+other systems.  You don't need to load this unless you want to run the unit
+tests.
+
+[local]: https://www.quicklisp.org/beta/faq.html#local-project
+[Bobbin]: https://github.com/sjl/bobbin
+[split-sequence]: https://www.cliki.net/split-sequence
