@@ -169,15 +169,12 @@
            (if (null arguments)
              (values (reverse toplevel) results)
              (destructuring-bind (arg . remaining) arguments
-               (recur (cond
-                        ((terminatorp arg)
-                         (dolist (r remaining) (push r toplevel))
-                         nil)
-                        ((shortp arg)
-                         (parse-short interface results arg remaining))
-                        ((longp arg)
-                         (parse-long interface results arg remaining))
-                        (t (push arg toplevel) remaining)))))))
+               (recur
+                 (cond
+                   ((terminatorp arg) (dolist (r remaining) (push r toplevel)))
+                   ((shortp arg) (parse-short interface results arg remaining))
+                   ((longp arg) (parse-long interface results arg remaining))
+                   (t (push arg toplevel) remaining)))))))
       (recur arguments))))
 
 
