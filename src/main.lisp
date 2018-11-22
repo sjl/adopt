@@ -60,7 +60,7 @@
     :short short
     :parameter parameter
     :initial-value initial-value
-    :reduce reduce))
+    :reduce (or reduce (constantly t))))
 
 
 (defclass interface ()

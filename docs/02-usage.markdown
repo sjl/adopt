@@ -9,48 +9,57 @@ Common Lisp.  It was made because none of the other libraries did what I needed.
 Package
 -------
 
-All core Adopt functions are in the `adopt` package.  You can `:use` that if you
-really want to, but it's probably clearer to use namespaced `adopt:…` symbols.
+All core Adopt functions and macros are in the `adopt` package.  You can `:use`
+that if you really want to, but it's probably clearer to use namespaced
+`adopt:…` symbols.
 
-Example
+Interfaces
+----------
+
+define-interface and usage.  nothing else.
+
+Parsing
 -------
 
-    (define-interface *my-program* "[options] FILES"
-      (verbosity
-        "Output extra information."
-        :short #\v
-        :long "verbose"
-        :initial-value 0
-        :reduce (constantly 1))
-      (verbosity
-        "Shut up."
-        :short #\q
-        :long "quiet"
-        :reduce (constantly -1))
-      (ignore
-        "Ignore FILE.  May be specified multiple times."
-        :long "ignore"
-        :parameter "FILE"
-        :reduce #'append1)
-      (name
-        "Your name.  May be specified many times, last one wins."
-        :short #\n
-        :long "name"
-        :parameter "NAME"
-        :reduce #'latest)
-      (meows
-        "Meow."
-        :short #\m
-        :long "meow"
-        :initial-value 0
-        :reduce #'1+))
-    
-    (pprint
-      (multiple-value-list
-        (parse-options *my-program*
-                       '("-vqn" "steve"
-                         "--meow"
-                         "-m" "--meow" "foo"
-                         "--name=sjl" "more"
-                         "--" "--ignore" "bar"
-                         ))))
+`parse-options` with a bare-bones interface.
+
+Options
+-------
+
+talk about the option arguments.
+
+Short and Long Options
+----------------------
+
+short versus long arguments.  1+ is required.
+
+Initial Value
+-------------
+
+at this point it's just a default
+
+Reduce
+------
+
+talk about reducers. mention argparse's:
+
+`store_const` is `(constantly x)`
+
+`store` is `#'latest`
+
+`store_true` is `(constantly t)`
+
+`store_false` is `(constantly nil)`
+
+`append` is `append1`
+
+`append_const` is `(rcurry #'append1 x)`
+
+`count` is `1+` with an `initial-value` of `0`.
+
+need to figure out `help` and `version`.
+
+Usage Printing
+--------------
+
+It's `(print-usage interface)`.
