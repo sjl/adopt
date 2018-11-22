@@ -195,7 +195,7 @@
                             (format nil "--~A~A" long parameter-string)))))))
 
 (defun print-option-usage (stream option option-column doc-column doc-width)
-  "Print `option` to `stream`, indented/wrapped properly.
+  "Print `option`'s usage to `stream`, indented/wrapped properly.
 
   Assumes the last thing printed to `stream` was a newline.
 
