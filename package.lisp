@@ -6,7 +6,12 @@
     :define-interface
 
     :argv
+    :exit
 
-    :latest
-    :append1
-    ))
+    :flip
+    :oldest
+    :newest
+    :collect
+
+    )
+  (:shadow :collect :documentation :reduce))

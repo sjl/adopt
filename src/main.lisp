@@ -1,19 +1,36 @@
 (in-package :adopt)
 
 ;;;; Utils --------------------------------------------------------------------
-(defun append1 (list el)
-  "Append element `el` to the end of `list`.
+(defun flip (function)
+  "Return a function of two arguments X and Y that calls `function` with Y and X.
 
-  This is implemented as `(append list (list el))`.  It is not particularly
-  fast.
+  Useful for wrapping existing functions that expect their arguments in the
+  opposite order.
+
+  Examples:
+
+    (funcall #'cons 1 2)        ; => (1 . 2)
+    (funcall (flip #'cons) 1 2) ; => (2 . 1)
+    (reduce (flip #'cons) '(1 2 3) :initial-value nil)
+    ; => (3 2 1)
+
+  "
+  (lambda (x y)
+    (funcall function y x)))
+
+(defun collect (list el)
+  "Append element `el` to the end of `list`.
 
   It is useful as a `:reduce` function when you want to collect all values given
   for an option.
 
+  This is implemented as `(append list (list el))`.  It is not particularly
+  fast.  If you can live with reversed output consider `(flip #'cons)`  instead.
+
   "
   (append list (list el)))
 
-(defun latest (old new)
+(defun newest (old new)
   "Return `new`.
 
   It is useful as a `:reduce` function when you want to just keep the last-given
@@ -22,6 +39,17 @@
   "
   (declare (ignore old))
   new)
+
+(defun oldest (old new)
+  "Return `new` if `old` is `nil`, otherwise return `old`.
+
+  It is useful as a `:reduce` function when you want to just keep the
+  first-given value for an option.
+
+  "
+  (if (null old)
+    new
+    old))
 
 
 (defun argv ()
@@ -36,71 +64,109 @@
   #+ccl ccl:*unprocessed-command-line-arguments*
   #-(or sbcl ccl) (error "ARGV is not supported on this implementation."))
 
+(defun exit (&optional (code 0))
+  #+sbcl (sb-ext:exit :code 0)
+  #-(or sbcl) (error "EXIT is not supported on this implementation."))
+
+
+(defun funcall% (value function)
+  (funcall function value))
+
+(define-modify-macro funcallf (function) funcall%)
+
 
 ;;;; Definition ---------------------------------------------------------------
 (defclass option ()
-  ((name :initarg :name :accessor name%)
-   (documentation :initarg :documentation :accessor documentation%)
-   (short :initarg :short :accessor short%)
-   (long :initarg :long :accessor long%)
-   (parameter :initarg :parameter :accessor parameter%)
-   (initial-value :initarg :initial-value :accessor initial-value%)
-   (reduce :initarg :reduce :accessor reduce%)))
+  ((name :initarg :name :accessor name)
+   (documentation :initarg :documentation :accessor documentation)
+   (short :initarg :short :accessor short)
+   (long :initarg :long :accessor long)
+   (parameter :initarg :parameter :accessor parameter)
+   (initial-value :initarg :initial-value :accessor initial-value)
+   (key :initarg :key :accessor key)
+   (result-key :initarg :result-key :accessor result-key)
+   (finally :initarg :finally :accessor finally)
+   (reducer :initarg :reduce :accessor reducer)))
 
 (defmethod print-object ((o option) stream)
   (print-unreadable-object (o stream :type t)
-    (format stream "~A ~A/~A" (name% o) (short% o) (long% o))))
+    (format stream "~A ~A/~A" (name o) (short o) (long o))))
 
-(defun make-option (name documentation &key
-                    long short parameter initial-value reduce)
-  (make-instance 'option
+(defun make-option (name result-key documentation &key
+                    long
+                    short
+                    parameter
+                    (initial-value nil initial-value?)
+                    (reduce (constantly t))
+                    (key #'identity)
+                    (finally #'identity))
+  (apply #'make-instance 'option
     :name name
+    :result-key result-key
     :documentation documentation
     :long long
     :short short
     :parameter parameter
-    :initial-value initial-value
-    :reduce (or reduce (constantly t))))
+    :reduce reduce
+    :key key
+    :finally finally
+    (when initial-value?
+      (list :initial-value initial-value))))
 
 
 (defclass interface ()
   ((options :initarg :options :accessor options)
    (short-options :initarg :short-options :accessor short-options)
    (long-options :initarg :long-options :accessor long-options)
-   (usage :initarg :usage :accessor usage)))
+   (usage :initarg :usage :accessor usage)
+   (documentation :initarg :documentation :accessor documentation)))
 
 (defmethod print-object ((i interface) stream)
   (print-unreadable-object (i stream :type t)
     (format stream "~{~A~^ ~}"
             (mapcar (lambda (o)
                       (format nil "(~A ~A/~A)"
-                              (name% o)
-                              (short% o)
-                              (long% o)))
+                              (name o)
+                              (short o)
+                              (long o)))
                     (options i)))))
 
-(defun make-interface (usage &rest options)
+(defun make-interface (usage documentation &rest options)
   (let ((interface (make-instance 'interface
                      :options nil
                      :usage usage
+                     :documentation documentation
                      :short-options (make-hash-table)
                      :long-options (make-hash-table :test #'equal))))
     (dolist (option options)
       (push option (options interface))
-      (let ((short (short% option))
-            (long (long% option)))
+      (let ((short (short option))
+            (long (long option)))
         (when short
           (setf (gethash short (short-options interface)) option))
         (when long
           (setf (gethash long (long-options interface)) option))))
-    (setf (options interface) (reverse (options interface)))
+    (funcallf (options interface) #'nreverse)
     interface))
 
-(defmacro define-interface (name usage &rest options)
-  `(defparameter ,name
-     (make-interface ,usage
-                     ,@(loop :for (name . args) :in options :collect
-                             `(make-option ',name ,@args)))))
+
+(defun resolve-names (name)
+  (etypecase name
+    (symbol (list name name))
+    ((cons symbol null)
+     (list (first name) (first name)))
+    ((cons symbol (cons symbol null))
+     name)))
+
+(defmacro define-interface (symbol usage documentation &rest options)
+  `(defparameter ,symbol
+     (make-interface
+       ,usage
+       ,documentation
+       ,@(loop
+           :for (name-and-result-key documentation . args) :in options
+           :for (option-name result-key) = (resolve-names name-and-result-key)
+           :collect `(make-option ',option-name ',result-key ,documentation ,@args)))))
 
 
 ;;;; Parsing ------------------------------------------------------------------
@@ -122,31 +188,48 @@
   (let* ((= (position #\= arg))
          (long-name (subseq arg 2 =))
          (option (gethash long-name (long-options interface)))
-         (name (name% option))
-         (current (gethash name results)))
-    (setf (gethash name results)
-          (if (parameter% option)
-            (funcall (reduce% option) current
-                     (if =
-                       (subseq arg (1+ =))
-                       (pop remaining)))
-            (funcall (reduce% option) current))))
+         (k (result-key option))
+         (current (gethash k results)))
+    (setf (gethash k results)
+          (if (parameter option)
+            (let ((param (funcall (key option)
+                                  (if =
+                                    (subseq arg (1+ =))
+                                    (pop remaining)))))
+              (funcall (reducer option) current param))
+            (funcall (reducer option) current))))
   remaining)
 
 (defun parse-short (interface results arg remaining)
   (let* ((short-name (aref arg 1))
          (option (gethash short-name (short-options interface)))
-         (name (name% option))
-         (current (gethash name results)))
-    (setf (gethash name results)
-          (if (parameter% option)
-            (funcall (reduce% option) current (if (> (length arg) 2)
-                                                (subseq arg 2) ; -xfoo
-                                                (pop remaining))) ; -x foo
-            (prog1 (funcall (reduce% option) current)
+         (k (result-key option))
+         (current (gethash k results)))
+    (setf (gethash k results)
+          (if (parameter option)
+            (let ((param (funcall (key option)
+                                  (if (> (length arg) 2)
+                                    (subseq arg 2) ; -xfoo
+                                    (pop remaining))))); -x foo
+              (funcall (reducer option) current param))
+            (prog1 (funcall (reducer option) current)
               (if (> (length arg) 2)
                 (push (format nil "-~A" (subseq arg 2)) remaining))))))
   remaining)
+
+
+(defun initialize-results (interface results)
+  (dolist (option (options interface))
+    (when (slot-boundp option 'initial-value)
+      (setf (gethash (result-key option) results)
+            (initial-value option))))
+  results)
+
+(defun finalize-results (interface results)
+  (dolist (option (options interface))
+    (funcallf (gethash (result-key option) results)
+              (finally option)))
+  results)
 
 
 (defun parse-options (interface &optional (arguments (rest (argv))))
@@ -156,19 +239,20 @@
 
   1. A fresh list of top-level, unaccounted-for arguments that don't correspond
      to any options defined in `interface`.
-  2. An `EQL` hash map of option `name`s to values.
+  2. An `EQL` hash table of option `name`s to values.
 
   See the full usage documentation for more information.
 
   "
   (let ((toplevel nil)
-        (results (make-hash-table)))
-    (dolist (option (options interface))
-      (setf (gethash (name% option) results) (initial-value% option)))
+        (results (make-hash-table))
+        (options (options interface)))
+    (initialize-results interface results)
     (labels
         ((recur (arguments)
            (if (null arguments)
-             (values (reverse toplevel) results)
+             (values (nreverse toplevel)
+                     (finalize-results interface results))
              (destructuring-bind (arg . remaining) arguments
                (recur
                  (cond
@@ -181,9 +265,9 @@
 
 ;;;; Printing Usage -----------------------------------------------------------
 (defun option-string (option)
-  (let* ((long (long% option))
-         (short (short% option))
-         (parameter (parameter% option))
+  (let* ((long (long option))
+         (short (short option))
+         (parameter (parameter option))
          (parameter-string (if parameter
                              (format nil " ~A" parameter)
                              "")))
@@ -205,7 +289,7 @@
   "
   (let ((option-string (option-string option))
         (lines (bobbin:wrap (split-sequence:split-sequence
-                              #\newline (documentation% option))
+                              #\newline (documentation option))
                             doc-width))
         (col 0))
     (flet ((print-at (c string &optional newline)
@@ -240,11 +324,13 @@
   option's documentation string will start on the next line.
 
   The result will look something like (assuming a usage string of
-  `\"[options] FILES\"`):
+  `\"[options] FILES\"` and a documentation string of `\"Intro.\"`):
 
     (print-usage *program-interface* :width 60 :option-width 15)
     ; =>
     ; USAGE: /bin/foo [options] FILES
+    ;
+    ; Intro.
     ;
     ; Options:
     ;   -v, --verbose    Output extra information.
@@ -262,7 +348,9 @@
   (assert (> width (+ 2 option-width 2)) (width option-width)
     "WIDTH (~D) must be at least 4 greater than OPTION-WIDTH (~D)"
     width option-width)
-  (format stream "USAGE: ~A ~A~2%Options:~%" program-name (usage interface))
+  (format stream "USAGE: ~A ~A~2%" program-name (usage interface))
+  (format stream (bobbin:wrap (documentation interface) width))
+  (format stream "~2%Options:~%")
   (let* ((option-column 2)
          (option-padding 2)
          (doc-column (+ option-column option-width option-padding))
