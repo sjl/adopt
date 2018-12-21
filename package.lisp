@@ -2,6 +2,11 @@
   (:use :cl)
   (:export
     :define-interface
+    :define-string
+
+    :make-interface
+    :make-option
+
     :parse-options
 
     :print-usage
@@ -22,6 +27,7 @@
     :oldest
     :newest
     :collect
+
 
     )
   (:shadow :collect :documentation :reduce))

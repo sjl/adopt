@@ -75,6 +75,11 @@
 (define-modify-macro funcallf (function) funcall%)
 
 
+(defmacro define-string (var string &rest args)
+  "Convenience macro for `(defparameter ,var (format nil ,string ,@args))`."
+  `(defparameter ,var (format nil ,string ,@args)))
+
+
 ;;;; Definition ---------------------------------------------------------------
 (defclass option ()
   ((name :initarg :name :accessor name)
