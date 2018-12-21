@@ -403,7 +403,8 @@
                     (stream *standard-output*)
                     (program-name (first (argv)))
                     (width 80)
-                    (option-width 20))
+                    (option-width 20)
+                    (include-examples t))
   "Print a pretty usage document for `interface` to `stream`.
 
   `width` should be the total width (in characters) for line-wrapping purposes.
@@ -421,6 +422,7 @@
     (print-usage *program-interface* :width 60 :option-width 15)
     ; =>
     ; foo - do some things and meow
+    ;
     ; USAGE: /bin/foo [options] FILES
     ;
     ; Foo is a program to frobulate some files, meowing as it
@@ -449,9 +451,18 @@
   (let* ((option-column 2)
          (option-padding 2)
          (doc-column (+ option-column option-width option-padding))
-         (doc-width (- width doc-column)))
+         (doc-width (- width doc-column))
+         (examples (examples interface))
+         (example-column 2)
+         (example-width (- width example-column)))
     (dolist (option (options interface))
-      (print-option-usage stream option option-column doc-column doc-width))))
+      (print-option-usage stream option option-column doc-column doc-width))
+    (when (and examples include-examples)
+      (format stream "~%Examples:~%")
+      (loop :for (prose . command) :in examples :do
+            (format stream "~%~{  ~A~^~%~}~2%      ~A~%"
+                    (bobbin:wrap (list prose) example-width)
+                    command)))))
 
 (defun print-usage-and-exit
     (interface &key
@@ -459,6 +470,7 @@
      (program-name (first (argv)))
      (width 80)
      (option-width 20)
+     (include-examples t)
      (exit-code 0))
   "Print a pretty usage document for `interface` to `stream` and exit.
 
@@ -473,7 +485,8 @@
                :stream stream
                :program-name program-name
                :width width
-               :option-width option-width)
+               :option-width option-width
+               :include-examples include-examples)
   (exit exit-code))
 
 (defun print-error-and-exit (error &key
