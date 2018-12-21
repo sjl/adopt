@@ -7,6 +7,7 @@
     :print-usage
     :print-usage-and-exit
     :print-error-and-exit
+    :print-manual
 
     :argv
     :exit

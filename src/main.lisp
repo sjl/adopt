@@ -79,6 +79,7 @@
 (defclass option ()
   ((name :initarg :name :accessor name)
    (documentation :initarg :documentation :accessor documentation)
+   (manual :initarg :manual :accessor manual)
    (short :initarg :short :accessor short)
    (long :initarg :long :accessor long)
    (parameter :initarg :parameter :accessor parameter)
@@ -92,9 +93,11 @@
   (print-unreadable-object (o stream :type t)
     (format stream "~A ~A/~A" (name o) (short o) (long o))))
 
-(defun make-option (name result-key documentation &key
+(defun make-option (name result-key &key
                     long
                     short
+                    documentation
+                    manual
                     parameter
                     reduce
                     (initial-value nil initial-value?)
@@ -104,6 +107,8 @@
     (error "Option ~A requires at least one of :long/:short." name))
   (when (null reduce)
     (error "Option ~A is missing required argument :reduce." name))
+  (when (null documentation)
+    (error "Option ~A is missing required argument :documentation" name))
   (when (and (member reduce (list 'collect #'collect
                                   'newest #'newest
                                   'oldest #'oldest))
@@ -114,6 +119,7 @@
          :name name
          :result-key result-key
          :documentation documentation
+         :manual manual
          :long long
          :short short
          :parameter parameter
@@ -125,7 +131,10 @@
 
 
 (defclass interface ()
-  ((options :initarg :options :accessor options)
+  ((name :initarg :name :accessor name)
+   (summary :initarg :summary :accessor summary)
+   (examples :initarg :examples :accessor examples)
+   (options :initarg :options :accessor options)
    (short-options :initarg :short-options :accessor short-options)
    (long-options :initarg :long-options :accessor long-options)
    (usage :initarg :usage :accessor usage)
@@ -141,11 +150,14 @@
                               (long o)))
                     (options i)))))
 
-(defun make-interface (usage documentation &rest options)
+(defun make-interface (&key name summary usage documentation examples options)
   (let ((interface (make-instance 'interface
                      :options nil
+                     :name name
                      :usage usage
+                     :summary summary
                      :documentation documentation
+                     :examples examples
                      :short-options (make-hash-table)
                      :long-options (make-hash-table :test #'equal))))
     (dolist (option options)
@@ -168,15 +180,21 @@
     ((cons symbol (cons symbol null))
      name)))
 
-(defmacro define-interface (symbol usage documentation &rest options)
+(defmacro define-interface
+    (symbol (&key name summary usage documentation examples) &body options)
   `(defparameter ,symbol
      (make-interface
-       ,usage
-       ,documentation
-       ,@(loop
-           :for (name-and-result-key documentation . args) :in options
-           :for (option-name result-key) = (resolve-names name-and-result-key)
-           :collect `(make-option ',option-name ',result-key ,documentation ,@args)))))
+       :name ,name
+       :summary ,summary
+       :usage ,usage
+       :documentation ,documentation
+       :examples ,examples
+       :options
+       (list
+         ,@(loop
+             :for (name-and-result-key . args) :in options
+             :for (option-name result-key) = (resolve-names name-and-result-key)
+             :collect `(make-option ',option-name ',result-key ,@args))))))
 
 
 ;;;; Parsing ------------------------------------------------------------------
@@ -338,7 +356,7 @@
       (recur arguments))))
 
 
-;;;; Output -------------------------------------------------------------------
+;;;; Usage --------------------------------------------------------------------
 (defun option-string (option)
   (let* ((long (long option))
          (short (short option))
@@ -398,14 +416,15 @@
   option's documentation string will start on the same line.  Otherwise the
   option's documentation string will start on the next line.
 
-  The result will look something like (assuming a usage string of
-  `\"[options] FILES\"` and a documentation string of `\"Intro.\"`):
+  The result will look something like:
 
     (print-usage *program-interface* :width 60 :option-width 15)
     ; =>
+    ; foo - do some things and meow
     ; USAGE: /bin/foo [options] FILES
     ;
-    ; Intro.
+    ; Foo is a program to frobulate some files, meowing as it
+    ; happens.
     ;
     ; Options:
     ;   -v, --verbose    Output extra information.
@@ -423,6 +442,7 @@
   (assert (> width (+ 2 option-width 2)) (width option-width)
     "WIDTH (~D) must be at least 4 greater than OPTION-WIDTH (~D)"
     width option-width)
+  (format stream "~A - ~A~2%" (name interface) (summary interface))
   (format stream "USAGE: ~A ~A~2%" program-name (usage interface))
   (format stream (bobbin:wrap (documentation interface) width))
   (format stream "~2%Options:~%")
@@ -473,3 +493,97 @@
   "
   (format stream "~A~A~%" (or prefix "") error)
   (adopt:exit exit-code))
+
+
+;;;; Man ----------------------------------------------------------------------
+(defun escape (string)
+  (if (zerop (length string))
+    ""
+    (with-output-to-string (s)
+      (when (char= #\. (aref string 0)) ;; is this some kind of joke, troff?
+        (write-string "\\[char46]" s)
+        (setf string (subseq string 1)))
+      (loop :for char :across string :do
+            (when (find char "\\-")
+              (write-char #\\ s))
+            (write-char char s)))))
+
+(defun split-paragraphs (string &key (delimiter ".PP") (escape t))
+  (let ((lines (split-sequence:split-sequence #\newline string)))
+    (when escape
+      (setf lines (mapcar #'escape lines)))
+    (substitute delimiter "" lines :test #'string=)))
+
+(defun option-troff (option)
+  (let ((short (short option))
+        (long (long option))
+        (parameter (parameter option)))
+    (labels
+        ((short-option ()
+           (when short
+             (if parameter
+               (format nil "\\-~A \" \" \\fI~A\\fR" short parameter)
+               (format nil "\\-~A" short))))
+         (long-option ()
+           (when long
+             (if parameter
+               (format nil "\\-\\-~A=\\fI~A\\fR" long parameter)
+               (format nil "\\-\\-~A" long)))))
+      (format nil ".BR ~{~A~^ \", \"~}"
+              (remove nil (list (short-option) (long-option)))))))
+
+
+(defun print-manual (interface &key
+                     (stream *standard-output*)
+                     (manual-section 1))
+  (check-type manual-section (integer 1))
+  (labels
+      ((f (&rest args)
+         (apply #'format stream args)
+         (terpri stream))
+       (fa (string-or-list)
+         (if (listp string-or-list)
+           (map nil #'fa string-or-list)
+           (f "~A" string-or-list)))
+       (print-header ()
+         (f ".TH ~:@(~A~) ~D" (escape (name interface)) manual-section))
+       (print-name ()
+         (f ".SH NAME")
+         (f "~A \\- ~A" (escape (name interface)) (escape (summary interface))))
+       (print-synopsis ()
+         (f ".SH SYNOPSIS")
+         (f ".B ~A" (escape (name interface)))
+         (unless (string= "" (usage interface))
+           (f ".R ~A" (escape (usage interface)))))
+       (print-description ()
+         (f ".SH DESCRIPTION")
+         (fa (split-paragraphs (documentation interface))))
+       (print-option (option)
+         (f ".TP")
+         (fa (option-troff option))
+         (fa (split-paragraphs
+               (or (manual option) (documentation option))
+               :delimiter ".IP")))
+       (print-options ()
+         (f ".SH OPTIONS")
+         (map nil #'print-option (options interface)))
+       (print-example (prose command prefix)
+         (f prefix)
+         (fa (escape prose))
+         (f ".PP")
+         (f ".nf")
+         (f ".RS")
+         (fa command)
+         (f ".RE")
+         (f ".fi"))
+       (print-examples ()
+         (let ((examples (examples interface)))
+           (loop :for prefix = ".SH EXAMPLES" :then ".PP"
+                 :for (prose . command) :in examples
+                 :do (print-example prose command prefix)))))
+    (print-header)
+    (print-name)
+    (print-synopsis)
+    (print-description)
+    (print-options)
+    (print-examples)))
