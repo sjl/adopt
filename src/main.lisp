@@ -62,8 +62,8 @@
   "
   #+sbcl sb-ext:*posix-argv*
   #+ccl (destructuring-bind (program-name &rest arguments)
-            ccl:*unprocessed-command-line-arguments*
-            (cons program-name (member "--" arguments :test #'string=)))
+            ccl:*command-line-argument-list*
+            (cons program-name (rest (member "--" arguments :test #'string=))))
   #-(or sbcl ccl) (error "ARGV is not supported on this implementation."))
 
 (defun exit (&optional (code 0))
