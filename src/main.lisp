@@ -68,7 +68,8 @@
 
 (defun exit (&optional (code 0))
   #+sbcl (sb-ext:exit :code code)
-  #-(or sbcl) (error "EXIT is not supported on this implementation."))
+  #+ccl (ccl:quit code)
+  #-(or sbcl ccl) (error "EXIT is not supported on this implementation."))
 
 
 (defun funcall% (value function)
