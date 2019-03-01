@@ -146,7 +146,8 @@
    (short-options :initarg :short-options :accessor short-options)
    (long-options :initarg :long-options :accessor long-options)
    (usage :initarg :usage :accessor usage)
-   (documentation :initarg :documentation :accessor documentation)))
+   (documentation :initarg :documentation :accessor documentation)
+   (manual :initarg :manual :accessor manual)))
 
 (defmethod print-object ((i interface) stream)
   (print-unreadable-object (i stream :type t)
@@ -158,13 +159,14 @@
                               (long o)))
                     (options i)))))
 
-(defun make-interface (&key name summary usage documentation examples options)
+(defun make-interface (&key name summary usage documentation manual examples options)
   (let ((interface (make-instance 'interface
                      :options nil
                      :name name
                      :usage usage
                      :summary summary
                      :documentation documentation
+                     :manual manual
                      :examples examples
                      :short-options (make-hash-table)
                      :long-options (make-hash-table :test #'equal))))
@@ -189,13 +191,14 @@
      name)))
 
 (defmacro define-interface
-    (symbol (&key name summary usage documentation examples) &body options)
+    (symbol (&key name summary usage documentation manual examples) &body options)
   `(defparameter ,symbol
      (make-interface
        :name ,name
        :summary ,summary
        :usage ,usage
        :documentation ,documentation
+       :manual ,manual
        :examples ,examples
        :options
        (list
@@ -326,7 +329,7 @@
 
   1. A fresh list of top-level, unaccounted-for arguments that don't correspond
      to any options defined in `interface`.
-  2. An `EQL` hash table of option `name`s to values.
+  2. An `EQL` hash table of option keys to values.
 
   See the full usage documentation for more information.
 
@@ -513,7 +516,7 @@
 
   "
   (format stream "~A~A~%" (or prefix "") error)
-  (adopt:exit exit-code))
+  (exit exit-code))
 
 
 ;;;; Man ----------------------------------------------------------------------
@@ -578,7 +581,8 @@
            (f ".R ~A" (escape (usage interface)))))
        (print-description ()
          (f ".SH DESCRIPTION")
-         (fa (split-paragraphs (documentation interface))))
+         (fa (split-paragraphs (or (manual interface)
+                                   (documentation interface)))))
        (print-option (option)
          (f ".TP")
          (fa (option-troff option))

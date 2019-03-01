@@ -3,11 +3,8 @@ Adopt
 
 I needed **A** **D**amn **OPT**ion parsing library.
 
-Adopt is a simple (~150 LOC) UNIX-style option parser in Common Lisp.
-It depends on [Bobbin][] and [split-sequence][].
-
-The test suite currently passes in SBCL, CCL, ECL, and ABCL on Ubuntu.  Further
-testing is welcome.
+Adopt is a simple UNIX-style option parser in Common Lisp.  It depends on
+[Bobbin][] and [split-sequence][].
 
 * **License:** MIT
 * **Documentation:** <https://sjl.bitbucket.io/adopt/>
