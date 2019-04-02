@@ -1,10 +1,11 @@
 Adopt
 =====
 
-I needed **A** **D**amn **OPT**ion parsing library.
+I needed **a** **d**amn **opt**ion parsing library.
 
-Adopt is a simple UNIX-style option parser in Common Lisp.  It depends on
-[Bobbin][] and [split-sequence][].
+Adopt is a simple UNIX-style option parser in Common Lisp, heavily influenced by
+Python's optparse and argparse.  It depends on [Bobbin][] and
+[split-sequence][].
 
 * **License:** MIT
 * **Documentation:** <https://sjl.bitbucket.io/adopt/>

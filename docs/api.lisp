@@ -13,7 +13,7 @@ don't touch it.
 
 (d-api:generate-documentation
   :adopt
-  #p"docs/03-reference.markdown"
+  #p"docs/02-reference.markdown"
   (list "ADOPT")
   *header*
   :title "API Reference")
