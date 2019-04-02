@@ -1,5 +1,5 @@
 (asdf:defsystem :adopt
-  :description "Simple, flexible UNIX-style option parsing."
+  :description "Simple, flexible, UNIX-style option parsing."
   :author "Steve Losh <steve@stevelosh.com>"
   :homepage "https://sjl.bitbucket.io/adopt/"
 
@@ -11,9 +11,9 @@
   :in-order-to ((asdf:test-op (asdf:test-op :adopt/test)))
 
   :serial t
-  :components ((:file "package")
-               (:module "src" :serial t
-                :components ((:file "main")))))
+  :components ((:module "src" :serial t
+                :components ((:file "package")
+                             (:file "main")))))
 
 
 (asdf:defsystem :adopt/test
@@ -25,10 +25,10 @@
   :depends-on (:adopt :1am :losh)
 
   :serial t
-  :components ((:file "package.test")
-               (:module "test"
+  :components ((:module "test"
                 :serial t
-                :components ((:file "tests"))))
+                :components ((:file "package")
+                             (:file "tests"))))
 
   :perform (asdf:test-op (op system)
              (funcall (read-from-string "adopt.test:run-tests"))))

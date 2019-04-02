@@ -1,16 +1,16 @@
 (defpackage :adopt
   (:use :cl)
   (:export
-    :define-interface
     :define-string
 
-    :make-interface
     :make-option
+    :make-group
+    :make-interface
 
     :parse-options
 
-    :print-usage
-    :print-usage-and-exit
+    :print-help
+    :print-help-and-exit
     :print-error-and-exit
     :print-manual
 
@@ -28,6 +28,5 @@
     :newest
     :collect
 
-
     )
-  (:shadow :collect :documentation :reduce))
+  (:shadow :collect :reduce))

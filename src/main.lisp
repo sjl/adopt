@@ -56,7 +56,7 @@
   "Return a list of the program name and command line arguments.
 
   This is not implemented for every Common Lisp implementation.  You can always
-  pass your own values to `parse-options` and `print-usage` if it's not
+  pass your own values to `parse-options` and `print-help` if it's not
   implemented for your particular Lisp.
 
   "
@@ -83,31 +83,39 @@
   `(defparameter ,var (format nil ,string ,@args)))
 
 
+(defmacro defclass* (name &rest slots)
+  `(defclass ,name ()
+     ,(loop :for slot :in slots
+            :for initarg = (intern (symbol-name slot) :keyword)
+            :collect `(,slot :initarg ,initarg :accessor ,slot))))
+
+
 ;;;; Definition ---------------------------------------------------------------
-(defclass option ()
-  ((name :initarg :name :accessor name)
-   (documentation :initarg :documentation :accessor documentation)
-   (manual :initarg :manual :accessor manual)
-   (short :initarg :short :accessor short)
-   (long :initarg :long :accessor long)
-   (parameter :initarg :parameter :accessor parameter)
-   (initial-value :initarg :initial-value :accessor initial-value)
-   (key :initarg :key :accessor key)
-   (result-key :initarg :result-key :accessor result-key)
-   (finally :initarg :finally :accessor finally)
-   (reducer :initarg :reduce :accessor reducer)))
+(defclass* option
+  name
+  result-key
+  help
+  manual
+  short
+  long
+  parameter
+  initial-value
+  key
+  finally
+  reduce)
 
 (defmethod print-object ((o option) stream)
   (print-unreadable-object (o stream :type t)
     (format stream "~A ~A/~A" (name o) (short o) (long o))))
 
-(defun make-option (name result-key &key
+(defun make-option (name &key
                     long
                     short
-                    documentation
+                    help
                     manual
                     parameter
                     reduce
+                    (result-key name)
                     (initial-value nil initial-value?)
                     (key #'identity)
                     (finally #'identity))
@@ -115,8 +123,8 @@
     (error "Option ~A requires at least one of :long/:short." name))
   (when (null reduce)
     (error "Option ~A is missing required argument :reduce." name))
-  (when (null documentation)
-    (error "Option ~A is missing required argument :documentation" name))
+  (when (null help)
+    (error "Option ~A is missing required argument :help" name))
   (when (and (member reduce (list 'collect #'collect
                                   'newest #'newest
                                   'oldest #'oldest))
@@ -126,7 +134,7 @@
   (apply #'make-instance 'option
          :name name
          :result-key result-key
-         :documentation documentation
+         :help help
          :manual manual
          :long long
          :short short
@@ -137,75 +145,82 @@
          (when initial-value?
            (list :initial-value initial-value))))
 
+(defun optionp (object)
+  (typep object 'option))
 
-(defclass interface ()
-  ((name :initarg :name :accessor name)
-   (summary :initarg :summary :accessor summary)
-   (examples :initarg :examples :accessor examples)
-   (options :initarg :options :accessor options)
-   (short-options :initarg :short-options :accessor short-options)
-   (long-options :initarg :long-options :accessor long-options)
-   (usage :initarg :usage :accessor usage)
-   (documentation :initarg :documentation :accessor documentation)
-   (manual :initarg :manual :accessor manual)))
+
+(defclass* group
+  name title help manual options)
+
+(defmethod print-object ((g group) stream)
+  (print-unreadable-object (g stream :type t)
+    (format stream "~A (~D options)" (name g) (length (options g)))))
+
+(defun make-group (name &key title help manual options)
+  (make-instance 'group
+    :name name
+    :title title
+    :help help
+    :manual manual
+    :options options))
+
+(defun make-default-group (options)
+  (make-instance 'group
+    :name nil
+    :title nil
+    :help nil
+    :manual nil
+    :options options))
+
+(defun groupp (object)
+  (typep object 'group))
+
+
+(defclass* interface
+  name
+  summary
+  examples
+  options
+  groups
+  short-options
+  long-options
+  usage
+  help
+  manual)
 
 (defmethod print-object ((i interface) stream)
   (print-unreadable-object (i stream :type t)
-    (format stream "~{~A~^ ~}"
-            (mapcar (lambda (o)
-                      (format nil "(~A ~A/~A)"
-                              (name o)
-                              (short o)
-                              (long o)))
-                    (options i)))))
+    (format stream "~A (~D options in ~D groups)"
+            (name i)
+            (length (options i))
+            (length (groups i)))))
 
-(defun make-interface (&key name summary usage documentation manual examples options)
-  (let ((interface (make-instance 'interface
-                     :options nil
-                     :name name
-                     :usage usage
-                     :summary summary
-                     :documentation documentation
-                     :manual manual
-                     :examples examples
-                     :short-options (make-hash-table)
-                     :long-options (make-hash-table :test #'equal))))
-    (dolist (option options)
-      (push option (options interface))
-      (let ((short (short option))
-            (long (long option)))
-        (when short
-          (setf (gethash short (short-options interface)) option))
-        (when long
-          (setf (gethash long (long-options interface)) option))))
-    (funcallf (options interface) #'nreverse)
+(defun make-interface (&key name summary usage help manual examples contents)
+  (let* ((ungrouped-options (remove-if-not #'optionp contents))
+         (groups (cons (make-default-group ungrouped-options)
+                       (remove-if-not #'groupp contents)))
+         (options (loop :for g :in groups :append (options g)))
+         (interface (make-instance 'interface
+                      :name name
+                      :usage usage
+                      :summary summary
+                      :help help
+                      :manual manual
+                      :examples examples
+                      :groups groups
+                      :options options
+                      :short-options (make-hash-table)
+                      :long-options (make-hash-table :test #'equal))))
+    (flet ((add-option (option)
+             (let ((short (short option))
+                   (long (long option)))
+               (when short
+                 (setf (gethash short (short-options interface)) option))
+               (when long
+                 (setf (gethash long (long-options interface)) option)))))
+      (dolist (g groups)
+        (map nil #'add-option (options g))))
     interface))
-
-
-(defun resolve-names (name)
-  (etypecase name
-    (symbol (list name name))
-    ((cons symbol null)
-     (list (first name) (first name)))
-    ((cons symbol (cons symbol null))
-     name)))
-
-(defmacro define-interface
-    (symbol (&key name summary usage documentation manual examples) &body options)
-  `(defparameter ,symbol
-     (make-interface
-       :name ,name
-       :summary ,summary
-       :usage ,usage
-       :documentation ,documentation
-       :manual ,manual
-       :examples ,examples
-       :options
-       (list
-         ,@(loop
-             :for (name-and-result-key . args) :in options
-             :for (option-name result-key) = (resolve-names name-and-result-key)
-             :collect `(make-option ',option-name ',result-key ,@args))))))
 
 
 ;;;; Parsing ------------------------------------------------------------------
@@ -246,8 +261,8 @@
                                     (if =
                                       (subseq arg (1+ =))
                                       (pop remaining)))))
-                (funcall (reducer option) current param))
-              (funcall (reducer option) current)))))
+                (funcall (reduce option) current param))
+              (funcall (reduce option) current)))))
   remaining)
 
 (defun parse-short (interface results arg remaining)
@@ -263,8 +278,8 @@
                                     (if (> (length arg) 2)
                                       (subseq arg 2) ; -xfoo
                                       (pop remaining))))); -x foo
-                (funcall (reducer option) current param))
-              (prog1 (funcall (reducer option) current)
+                (funcall (reduce option) current param))
+              (prog1 (funcall (reduce option) current)
                 (if (> (length arg) 2)
                   (push (format nil "-~A" (subseq arg 2)) remaining)))))))
   remaining)
@@ -331,7 +346,7 @@
      to any options defined in `interface`.
   2. An `EQL` hash table of option keys to values.
 
-  See the full usage documentation for more information.
+  See the full documentation for more information.
 
   "
   (let ((toplevel nil)
@@ -367,7 +382,7 @@
       (recur arguments))))
 
 
-;;;; Usage --------------------------------------------------------------------
+;;;; Help ---------------------------------------------------------------------
 (defun option-string (option)
   (let* ((long (long option))
          (short (short option))
@@ -382,18 +397,18 @@
                           (when long
                             (format nil "--~A~A" long parameter-string)))))))
 
-(defun print-option-usage (stream option option-column doc-column doc-width)
-  "Print `option`'s usage to `stream`, indented/wrapped properly.
+(defun print-option-help (stream option option-column doc-column doc-width)
+  "Print `option`'s help to `stream`, indented/wrapped properly.
 
   Assumes the last thing printed to `stream` was a newline.
 
-  The option string will start at `option-column`.  The documentation will start
-  at `doc-column` and be line-wrapped to `doc-width`.
+  The option string will start at `option-column`.  The help will start at
+  `doc-column` and be line-wrapped to `doc-width`.
 
   "
   (let ((option-string (option-string option))
         (lines (bobbin:wrap (split-sequence:split-sequence
-                              #\newline (documentation option))
+                              #\newline (help option))
                             doc-width))
         (col 0))
     (flet ((print-at (c string &optional newline)
@@ -410,13 +425,13 @@
       (dolist (line lines)
         (print-at doc-column line t)))))
 
-(defun print-usage (interface &key
-                    (stream *standard-output*)
-                    (program-name (first (argv)))
-                    (width 80)
-                    (option-width 20)
-                    (include-examples t))
-  "Print a pretty usage document for `interface` to `stream`.
+(defun print-help (interface &key
+                   (stream *standard-output*)
+                   (program-name (first (argv)))
+                   (width 80)
+                   (option-width 20)
+                   (include-examples t))
+  "Print a pretty help document for `interface` to `stream`.
 
   `width` should be the total width (in characters) for line-wrapping purposes.
   Care will be taken to ensure lines are no longer than this, though some edge
@@ -424,13 +439,13 @@
   through.
 
   `option-width` should be the width of the column of short/long options (in
-  characters).  If the short/long option documentation is shorter than this, the
-  option's documentation string will start on the same line.  Otherwise the
-  option's documentation string will start on the next line.
+  characters).  If the short/long option help is shorter than this, the option's
+  help string will start on the same line.  Otherwise the option's help string
+  will start on the next line.
 
   The result will look something like:
 
-    (print-usage *program-interface* :width 60 :option-width 15)
+    (print-help *program-interface* :width 60 :option-width 15)
     ; =>
     ; foo - do some things and meow
     ;
@@ -457,17 +472,19 @@
     width option-width)
   (format stream "~A - ~A~2%" (name interface) (summary interface))
   (format stream "USAGE: ~A ~A~2%" program-name (usage interface))
-  (format stream (bobbin:wrap (documentation interface) width))
-  (format stream "~2%Options:~%")
-  (let* ((option-column 2)
-         (option-padding 2)
-         (doc-column (+ option-column option-width option-padding))
-         (doc-width (- width doc-column))
-         (examples (examples interface))
+  (format stream (bobbin:wrap (help interface) width))
+  (format stream "~%")
+  (dolist (group (groups interface))
+    (format stream "~%~A:~%" (or (title group) (name group) "Options"))
+    (let* ((option-column 2)
+           (option-padding 2)
+           (doc-column (+ option-column option-width option-padding))
+           (doc-width (- width doc-column)))
+      (dolist (option (options group))
+        (print-option-help stream option option-column doc-column doc-width))))
+  (let* ((examples (examples interface))
          (example-column 2)
          (example-width (- width example-column)))
-    (dolist (option (options interface))
-      (print-option-usage stream option option-column doc-column doc-width))
     (when (and examples include-examples)
       (format stream "~%Examples:~%")
       (loop :for (prose . command) :in examples :do
@@ -475,7 +492,7 @@
                     (bobbin:wrap (list prose) example-width)
                     command)))))
 
-(defun print-usage-and-exit
+(defun print-help-and-exit
     (interface &key
      (stream *standard-output*)
      (program-name (first (argv)))
@@ -483,16 +500,16 @@
      (option-width 20)
      (include-examples t)
      (exit-code 0))
-  "Print a pretty usage document for `interface` to `stream` and exit.
+  "Print a pretty help document for `interface` to `stream` and exit.
 
   Handy for easily providing --help:
 
     (multiple-value-bind (arguments options) (parse-options *ui*)
       (when (gethash 'help options)
-        (print-usage-and-exit *ui*))
+        (print-help-and-exit *ui*))
       (run arguments options))
   "
-  (print-usage interface
+  (print-help interface
                :stream stream
                :program-name program-name
                :width width
@@ -582,16 +599,24 @@
        (print-description ()
          (f ".SH DESCRIPTION")
          (fa (split-paragraphs (or (manual interface)
-                                   (documentation interface)))))
+                                   (help interface)))))
        (print-option (option)
          (f ".TP")
          (fa (option-troff option))
          (fa (split-paragraphs
-               (or (manual option) (documentation option))
+               (or (manual option) (help option))
                :delimiter ".IP")))
-       (print-options ()
-         (f ".SH OPTIONS")
-         (map nil #'print-option (options interface)))
+       (print-group (group)
+         (if (title group)
+           (f ".SS ~A" (escape (title group)))
+           (f ".SH OPTIONS"))
+         (let ((desc (or (manual group)
+                         (help group))))
+           (when desc
+             (fa (split-paragraphs desc))))
+         (map nil #'print-option (options group)))
+       (print-groups ()
+         (map nil #'print-group (groups interface)))
        (print-example (prose command prefix)
          (f prefix)
          (fa (escape prose))
@@ -610,5 +635,5 @@
     (print-name)
     (print-synopsis)
     (print-description)
-    (print-options)
+    (print-groups)
     (print-examples)))
