@@ -25,8 +25,9 @@
 
     :flip
     :oldest
-    :newest
     :collect
+    :first
+    :last
 
     )
-  (:shadow :collect :reduce))
+  (:shadow :collect :reduce :first :last))

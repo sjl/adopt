@@ -40,122 +40,124 @@
 
 
 ;;;; Tests --------------------------------------------------------------------
-(define-interface *noop* "usage")
-(define-interface *option-types* "usage"
-  (short
-    "short-only"
-    :short #\s
-    :reduce (constantly t))
-  (long
-    "long-only"
-    :long "long"
-    :reduce (constantly t))
-  (both
-    "both short and long"
-    :short #\b
-    :long "both"
-    :reduce (constantly t)))
+(defparameter *noop*
+  (adopt:make-interface))
 
-(define-interface *reducers* "usage"
-  (c1
-    "constantly 1"
-    :short #\1
-    :reduce (constantly 1))
-  (c2
-    "constantly 2"
-    :short #\2
-    :reduce (constantly 2))
-  (snoc
-    "snoc"
-    :long "snoc"
-    :parameter "FOO"
-    :reduce (lambda (l el)
-              (cons el l))))
+(defparameter *option-types*
+  (adopt:make-interface
+    :contents
+    (list
+      (adopt:make-option 'long
+        :help "long only"
+        :long "long"
+        :reduce (constantly t))
+      (adopt:make-option 'short
+        :help "short only"
+        :short #\s
+        :reduce (constantly t))
+      (adopt:make-option 'both
+        :help "both short and long"
+        :short #\b
+        :long "both"
+        :reduce (constantly t)))))
 
-(define-interface *same-name* "usage"
-  (x
-    "constantly 1"
-    :short #\1
-    :reduce (constantly 1))
-  (x
-    "constantly 2"
-    :short #\2
-    :reduce (constantly 2)))
+(defparameter *reducers*
+  (adopt:make-interface
+    :contents
+    (list
+      (adopt:make-option 'c1
+        :help "1"
+        :short #\1
+        :reduce (constantly 1))
+      (adopt:make-option 'c2
+        :help "2"
+        :short #\2
+        :reduce (constantly 2))
+      (adopt:make-option 'collect
+        :help "collect"
+        :short #\c
+        :long "collect"
+        :parameter "DATA"
+        :reduce #'adopt:collect)
+      (adopt:make-option 'last
+        :help "last"
+        :short #\l
+        :long "last"
+        :parameter "DATA"
+        :reduce #'adopt:last)
+      (adopt:make-option 'first
+        :help "first"
+        :short #\f
+        :long "first"
+        :parameter "DATA"
+        :reduce #'adopt:first))))
 
-(define-interface *initial-value* "usage"
-  (foo
-    "foo"
-    :long "foo"
-    :initial-value "hello"
-    :reduce (constantly "goodbye")))
+(defparameter *same-key*
+  (adopt:make-interface
+    :contents
+    (list
+      (adopt:make-option '1
+        :result-key 'foo
+        :help "1"
+        :short #\1
+        :reduce (constantly 1))
+      (adopt:make-option '2
+        :result-key 'foo
+        :help "2"
+        :short #\2
+        :reduce (constantly 2)))))
 
-(define-interface *keys* "keys"
-  (num
-    "num"
-    :long "num"
-    :parameter "NUMBER"
-    :initial-value nil
-    :key #'parse-integer
-    :reduce (flip #'cons))
-  (len
-    "len"
-    :long "len"
-    :parameter "STRING"
-    :initial-value nil
-    :key #'length
-    :reduce (flip #'cons)))
+(defparameter *initial-value*
+  (adopt:make-interface
+    :contents
+    (list
+      (adopt:make-option 'foo
+        :help "foo"
+        :short #\f
+        :long "foo"
+        :initial-value "hello"
+        :reduce (constantly "goodbye")))))
 
-(define-interface *finally* "finally"
-  (yell
-    "yell"
-    :short #\y
-    :parameter "STRING"
-    :initial-value "default"
-    :reduce #'newest
-    :finally #'string-upcase)
-  (a
-    "ensure a"
-    :short #\a
-    :parameter "STRING"
-    :initial-value "x"
-    :reduce #'newest
-    :finally (lambda (a)
-               (assert (string= "a" a))
-               :ok)))
+(defparameter *finally*
+  (adopt:make-interface
+    :contents
+    (list
+      (adopt:make-option 'yell
+        :help "yell"
+        :short #\y
+        :long "yell"
+        :parameter "VAL"
+        :initial-value "default"
+        :reduce #'adopt:last
+        :finally #'string-upcase)
+      (adopt:make-option 'a
+        :help "ensure a"
+        :short #\a
+        :initial-value "x"
+        :parameter "A"
+        :reduce #'adopt:last
+        :finally (lambda (a)
+                   (assert (string= "a" a))
+                   :ok)))))
 
-(define-interface *parameters* "usage"
-  (no-param
-    "no parameter"
-    :long "no-param"
-    :initial-value 0
-    :reduce #'1+)
-  (param
-    "one parameter"
-    :long "param"
-    :parameter "P"
-    :reduce #'(lambda (old new) old new)))
-
-(define-interface *helpers* "usage"
-  (oldest
-    "oldest"
-    :short #\o
-    :parameter "X"
-    :reduce #'oldest)
-  (newest
-    "newest"
-    :short #\n
-    :parameter "X"
-    :reduce #'newest)
-  (collect
-    "collect"
-    :short #\c
-    :parameter "X"
-    :reduce #'collect)
-  (flip
-    "flip"
-    :short #\f
-    :parameter "X"
-    :reduce (flip #'cons)))
+(defparameter *keys*
+  (adopt:make-interface
+    :contents
+    (list
+      (adopt:make-option 'int
+        :help "int"
+        :short #\i
+        :long "int"
+        :parameter "K"
+        :reduce #'adopt:collect
+        :key #'parse-integer)
+      (adopt:make-option 'len
+        :help "len"
+        :short #\l
+        :long "len"
+        :parameter "K"
+        :reduce #'adopt:collect
+        :key #'length))))
 
 
 (define-test noop
@@ -201,26 +203,39 @@
          '()
          (result 'c1 nil
                  'c2 nil
-                 'snoc nil))
-  (check *reducers* "here we --snoc 1 --snoc 2 go -2 --snoc 3 -1"
+                 'first nil
+                 'last nil
+                 'collect nil))
+
+  (check *reducers* "here we -2 -2 --collect a -c b go --collect c -1"
          '("here" "we" "go")
          (result 'c1 1
                  'c2 2
-                 'snoc '("3" "2" "1"))))
+                 'first nil
+                 'last nil
+                 'collect '("a" "b" "c")))
 
-(define-test same-name
-  (check *same-name* ""
+  (check *reducers* "foo -f 1 -f 2 --last 1 --first 3 --last 2 -l 3 bar"
+         '("foo" "bar")
+         (result 'c1 nil
+                 'c2 nil
+                 'first "1"
+                 'last "3"
+                 'collect nil)))
+
+(define-test same-key
+  (check *same-key* ""
          '()
          (result 'x nil))
-  (check *same-name* "-1"
+  (check *same-key* "-1"
          '()
-         (result 'x 1))
-  (check *same-name* "-2"
+         (result 'foo 1))
+  (check *same-key* "-2"
          '()
-         (result 'x 2))
-  (check *same-name* "-1121"
+         (result 'foo 2))
+  (check *same-key* "-1121"
          '()
-         (result 'x 1)))
+         (result 'foo 1)))
 
 (define-test initial-value
   (check *initial-value* ""
@@ -237,11 +252,11 @@
   (check *keys* ""
          '()
          (result 'len '()
-                 'num '()))
-  (check *keys* "--num 123 --num 0 --len abc --len 123456"
+                 'int '()))
+  (check *keys* "--int 123 --int 0 --len abc --len 123456"
          '()
-         (result 'num '(0 123)
-                 'len '(6 3))))
+         (result 'int '(123 0)
+                 'len '(3 6))))
 
 (define-test finally
   (check *finally* "-a a"
@@ -251,34 +266,9 @@
          '()
          (result 'yell "BAR" 'a :ok)))
 
-(define-test parameters
-  (check *parameters* ""
-         '()
-         (result 'no-param 0
-                 'param nil))
-  (check *parameters* "--no-param foo"
-         '("foo")
-         (result 'no-param 1
-                 'param nil))
-  (check *parameters* "--param foo"
-         '()
-         (result 'no-param 0
-                 'param "foo"))
-  (check *parameters* "--no-param --param foo --no-param --param bar baz"
-         '("baz")
-         (result 'no-param 2
-                 'param "bar")))
-
 (define-test helpers
-  (check *helpers* ""
-         '()
-         (result 'oldest nil
-                 'newest nil
-                 'collect nil
-                 'flip nil))
-  (check *helpers* "-o1 -o2 -n1 -n2 -c1 -c2 -f1 -f2"
-         '()
-         (result 'oldest "1"
-                 'newest "2"
-                 'collect '("1" "2")
-                 'flip '("2" "1"))))
+  (is (equal :old (adopt:first :old :new)))
+  (is (equal :new (adopt:last :old :new)))
+  (is (equal '(:a) (adopt:collect '() :a)))
+  (is (equal '(:a :b) (adopt:collect '(:a) :b)))
+  (is (equal '(2 . 1) (funcall (adopt:flip 'cons) 1 2))))

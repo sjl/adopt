@@ -1,3 +1,3 @@
 (defpackage :adopt.test
-  (:use :cl :1am :adopt)
+  (:use :cl :1am)
   (:export :run-tests))

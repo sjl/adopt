@@ -30,7 +30,7 @@
   "
   (append list (list el)))
 
-(defun newest (old new)
+(defun last (old new)
   "Return `new`.
 
   It is useful as a `:reduce` function when you want to just keep the last-given
@@ -40,7 +40,7 @@
   (declare (ignore old))
   new)
 
-(defun oldest (old new)
+(defun first (old new)
   "Return `new` if `old` is `nil`, otherwise return `old`.
 
   It is useful as a `:reduce` function when you want to just keep the
@@ -126,8 +126,8 @@
   (when (null help)
     (error "Option ~A is missing required argument :help" name))
   (when (and (member reduce (list 'collect #'collect
-                                  'newest #'newest
-                                  'oldest #'oldest))
+                                  'first #'first
+                                  'last #'last))
              (null parameter))
     (error "Option ~A has reduce function ~A, which requires a :parameter."
            name reduce))
@@ -427,7 +427,7 @@
 
 (defun print-help (interface &key
                    (stream *standard-output*)
-                   (program-name (first (argv)))
+                   (program-name (car (argv)))
                    (width 80)
                    (option-width 20)
                    (include-examples t))
@@ -495,7 +495,7 @@
 (defun print-help-and-exit
     (interface &key
      (stream *standard-output*)
-     (program-name (first (argv)))
+     (program-name (car (argv)))
      (width 80)
      (option-width 20)
      (include-examples t)
