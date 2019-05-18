@@ -354,6 +354,23 @@ hash table are (by default) the option names given as the first argument to
 This can come in useful if you want multiple options that affect the same result
 (e.g. `--verbose` and `--silent` flags that toggle extra log output on and off).
 
+Option Formats
+--------------
+
+Adopt tries to support the most common styles of long and short UNIX options.
+
+Long options must be given with two dashes (`--foo`).  If a long option takes
+a parameter it can be given as the next argument (`--foo meow`) or mashed
+together into the same argument using an equals sign (`--foo=meow`).
+
+Short options must be given with a single dash (`-f`).  If several short options
+do not take any parameters, they can be mashed together and given all at once
+(`-xzvf`).  If a short option takes a parameter it can be given as the next
+argument (`-n foo`) or mashed together with the option `-nfoo`.
+
+The special string `--` signals that all remaining arguments are normal text
+arguments, and should not be parsed as options.
+
 Top-Level Structure
 -------------------
 
