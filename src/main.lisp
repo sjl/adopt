@@ -413,7 +413,7 @@
         (col 0))
     (flet ((print-at (c string &optional newline)
              "Print `string` starting at column `c`, adding padding/newline if needed."
-             (when (> col c)
+             (when (>= col c)
                (terpri stream)
                (setf col 0))
              (format stream "~vA~A" (- c col) #\space string)
