@@ -26,6 +26,7 @@ Let's say you're developing a program to search the contents of files (because
 the world certainly needs *another* `grep` replacement).  You might start with
 something like:
 
+    :::lisp
     (defparameter *ui*
       (adopt:make-interface
         :name "search"
@@ -42,14 +43,15 @@ something like:
 
 You can now print some pretty help text for the CLI with `adopt:print-help`:
 
+    :::lisp
     (adopt:print-help *ui*)
     ; =>
-    search - search files for a regular expression
-
-    USAGE: /path/to/binary [OPTIONS] PATTERN [FILE]...
-
-    Search the contents of each FILE for the regular expression PATTERN.  If no
-    files are specified, searches standard input instead.
+    ; search - search files for a regular expression
+    ;
+    ; USAGE: /path/to/binary [OPTIONS] PATTERN [FILE]...
+    ;
+    ; Search the contents of each FILE for the regular expression PATTERN.  If no
+    ; files are specified, searches standard input instead.
 
 ### Line Wrapping
 
@@ -63,6 +65,7 @@ preprocess the help text argument:
 
 [tilde-newline]: http://www.lispworks.com/documentation/lw71/CLHS/Body/22_cic.htm
 
+    :::lisp
     (defparameter *ui*
       (adopt:make-interface
         :name "search"
@@ -76,6 +79,7 @@ preprocess the help text argument:
 If you want to pull out the documentation string into its own variable to keep
 that `make-interface` call from getting too unwieldy, you can certainly do that:
 
+    :::lisp
     (defparameter *help-text*
       (format nil "Search the contents of each FILE for the ~
                    regular expression PATTERN.  If no files ~
@@ -92,6 +96,7 @@ that `make-interface` call from getting too unwieldy, you can certainly do that:
 The `(defparameter … (format nil …))` pattern can be tedious to write, so Adopt
 provides a helper macro `define-string` that does exactly that:
 
+    :::lisp
     (adopt:define-string *help-text*
       "Search the contents of each FILE for the regular ~
        expression PATTERN.  If no files are specified, ~
@@ -111,6 +116,7 @@ friend:
 
 [Bobbin]: https://sjl.bitbucket.io/bobbin/
 
+    :::lisp
     (adopt:define-string *help-text*
       "Search the contents of each FILE for the regular ~
        expression PATTERN.~@
@@ -128,18 +134,19 @@ friend:
 If you want to control the width of the help text lines when they are printed,
 `adopt:print-help` takes a `:width` argument:
 
+    :::lisp
     (adopt:print-help *ui* :width 50)
     ; =>
-    search - search files for a regular expression
-
-    USAGE: … [OPTIONS] PATTERN [FILE]...
-
-    Search the contents of each FILE for the regular
-    expression PATTERN.
-
-    If no files are specified (or if - is given as a
-    file name), standard input will be searched
-    instead.
+    ; search - search files for a regular expression
+    ;
+    ; USAGE: … [OPTIONS] PATTERN [FILE]...
+    ;
+    ; Search the contents of each FILE for the regular
+    ; expression PATTERN.
+    ;
+    ; If no files are specified (or if - is given as a
+    ; file name), standard input will be searched
+    ; instead.
 
 `adopt:print-help` takes a number of other options — see the API Reference for
 more information.
@@ -150,12 +157,13 @@ Describing the CLI in detail is helpful, but users can often learn a lot more by
 seeing a few examples of its usage.  `make-interface` can take an `:examples`
 argument, which should be an alist of `(description . example)` conses:
 
+    :::lisp
     (defparameter *ui*
       (adopt:make-interface
         :name "search"
         :summary "search files for a regular expression"
         :usage "[OPTIONS] PATTERN [FILE]..."
-        :help …
+        :help *help-text*
         :examples
         '(("Search foo.txt for the string 'hello':"
            . "search hello foo.txt")
@@ -166,31 +174,31 @@ argument, which should be an alist of `(description . example)` conses:
 
     (adopt:print-help *ui* :width 50)
     ; =>
-    search - search files for a regular expression
-
-    USAGE: … [OPTIONS] PATTERN [FILE]...
-
-    Search the contents of each FILE for the regular
-    expression PATTERN.
-
-    If no files are specified (or if - is given as a
-    file name) standard input will be searched
-    instead.
-
-    Examples:
-
-      Search foo.txt for the string 'hello':
-
-          search hello foo.txt
-
-      Search standard input for lines starting with x:
-
-          search '^x' -
-
-      Watch the file log.txt for lines containing the
-      username steve.losh:
-
-          tail foo/bar/baz/log.txt | search --literal steve.losh -
+    ; search - search files for a regular expression
+    ;
+    ; USAGE: … [OPTIONS] PATTERN [FILE]...
+    ;
+    ; Search the contents of each FILE for the regular
+    ; expression PATTERN.
+    ;
+    ; If no files are specified (or if - is given as a
+    ; file name) standard input will be searched
+    ; instead.
+    ;
+    ; Examples:
+    ;
+    ;   Search foo.txt for the string 'hello':
+    ;
+    ;       search hello foo.txt
+    ;
+    ;   Search standard input for lines starting with x:
+    ;
+    ;       search '^x' -
+    ;
+    ;   Watch the file log.txt for lines containing the
+    ;   username steve.losh:
+    ;
+    ;       tail foo/bar/baz/log.txt | search --literal steve.losh -
 
 Notice how Adopt line wraps the prose explaining each example, but leaves the
 example itself untouched for easier copying and pasting.  In general Adopt tries
@@ -203,6 +211,7 @@ Exiting
 Adopt provides some helpful utility functions to exit out of your program with
 a UNIX exit code.  These do what you think they do:
 
+    :::lisp
     (adopt:exit)
 
     (adopt:exit 1)
@@ -227,6 +236,7 @@ Options
 Now that you know how to create an interface, you can create some options to use
 inside it with `adopt:make-option`:
 
+    :::lisp
     (defparameter *option-version*
       (adopt:make-option 'version
         :long "version"
@@ -260,19 +270,20 @@ inside it with `adopt:make-option`:
 
 Adopt will automatically add the options to the help text:
 
+    :::lisp
     (adopt:print-help *ui*)
     ; =>
-    search - search files for a regular expression
-
-    USAGE: /usr/local/bin/sbcl [OPTIONS] PATTERN [FILE]...
-
-    Search the contents of …
-
-    Options:
-      --version             display version information and exit
-      -h, --help            display help information and exit
-      -l, --literal         treat PATTERN as a literal string instead of a regular
-                            expression
+    ; search - search files for a regular expression
+    ;
+    ; USAGE: /usr/local/bin/sbcl [OPTIONS] PATTERN [FILE]...
+    ;
+    ; Search the contents of …
+    ;
+    ; Options:
+    ;   --version             display version information and exit
+    ;   -h, --help            display help information and exit
+    ;   -l, --literal         treat PATTERN as a literal string instead of a regular
+    ;                         expression
 
 The first argument to `make-option` is the name of the option, which we'll see
 put to use shortly.  At least one of `:short` and `:long` is required, and
@@ -283,6 +294,7 @@ I prefer to define each option as its own global variable to keep the call to
 `make-interface` from getting too large and unwieldy, but feel free to do
 something like this if you prefer to avoid cluttering your package:
 
+    :::lisp
     (defparameter *ui*
       (adopt:make-interface
         …
@@ -298,18 +310,20 @@ At this point we've got an interface with some options, so we can use it to
 parse a list of strings we've received as command line arguments with
 `adopt:parse-options`:
 
+    :::lisp
     (adopt:parse-options *ui* '("foo.*" "--literal" "a.txt" "b.txt"))
     ; =>
-    ("foo.*" "a.txt" "b.txt")
-    #<HASH-TABLE :TEST EQL :COUNT 3 {10103142A3}>
+    ; ("foo.*" "a.txt" "b.txt")
+    ; #<HASH-TABLE :TEST EQL :COUNT 3 {10103142A3}>
 
 From now on I'll use a special pretty printer for hash tables to make it easier
 to see what's inside them:
 
+    :::lisp
     (adopt:parse-options *ui* '("foo.*" "--literal" "a.txt" "b.txt"))
     ; =>
-    ("foo.*" "a.txt" "b.txt")
-    {LITERAL: T, VERSION: NIL, HELP: NIL}
+    ; ("foo.*" "a.txt" "b.txt")
+    ; {LITERAL: T, VERSION: NIL, HELP: NIL}
 
 `parse-options` returns two values:
 
@@ -321,6 +335,7 @@ hash table are (by default) the option names given as the first argument to
 `make-option`.  You can specify a different key for a particular option with the
 `:result-key` argument to `make-option`:
 
+    :::lisp
     (defparameter *option-literal*
       (adopt:make-option 'literal
         :result-key 'pattern-is-literal
@@ -333,8 +348,8 @@ hash table are (by default) the option names given as the first argument to
 
     (adopt:parse-options *ui* '("foo.*" "--literal" "a.txt" "b.txt"))
     ; =>
-    ("foo.*" "a.txt" "b.txt")
-    {PATTERN-IS-LITERAL: T, VERSION: NIL, HELP: NIL}
+    ; ("foo.*" "a.txt" "b.txt")
+    ; {PATTERN-IS-LITERAL: T, VERSION: NIL, HELP: NIL}
 
 This can come in useful if you want multiple options that affect the same result
 (e.g. `--verbose` and `--silent` flags that toggle extra log output on and off).
@@ -345,14 +360,14 @@ Top-Level Structure
 We'll look at how the option values are computed shortly, but first let's see
 the overall structure of the programs you'll typically create with Adopt:
 
+    :::lisp
     (defun run (pattern files &key literal)
       ;; Actually do something here.
       )
 
     (defun toplevel ()
       (handler-case
-          (multiple-value-bind (arguments options)
-              (adopt:parse-options *ui*)
+          (multiple-value-bind (arguments options) (adopt:parse-options *ui*)
             (when (gethash 'help options)
               (adopt:print-help-and-exit *ui*))
             (when (gethash 'version options)
@@ -448,6 +463,7 @@ these as our building blocks.
 To define an option that just tracks whether it's ever been given, you can do
 something like:
 
+    :::lisp
     (defparameter *option-help*
       (adopt:make-option 'help
         :long "help"
@@ -460,8 +476,9 @@ something like:
 
 But since `nil` is the default initial value and Common Lisp provides the handy
 [`constantly`](http://www.lispworks.com/documentation/HyperSpec/Body/f_cons_1.htm)
-function, we can do this more concisely:
+function, you can do this more concisely:
 
+    :::lisp
     (defparameter *option-help*
       (adopt:make-option 'help
         :long "help"
@@ -471,9 +488,10 @@ function, we can do this more concisely:
 
 ### Boolean Options
 
-If we want to have multiple options that both affect the same key in the
-results, we can use `:result-key` to do this:
+If you want to have multiple options that both affect the same key in the
+results, you can use `:result-key` to do this:
 
+    :::lisp
     (defparameter *option-paginate*
       (adopt:make-option 'paginate
         :long "paginate"
@@ -493,22 +511,25 @@ The way we've written this, if the user gives multiple options the last-given
 one will take precedence.  This is generally what you want, because it allows
 someone to add a shell alias with these options like this:
 
+    :::bash
     alias g='git --paginate --color=always'
 
 but still lets them override an option at runtime for a single invocation:
 
+    :::bash
     g --no-paginate log
     # expands to: git --paginate --color=always --no-paginate log
 
-If the last-given option didn't take precedence, they would have to fall back to
-the non-alias version of the command, and type out all the options they *do*
-want by hand.  This is annoying, so it's usually better to let the last one win.
+If the last-given option didn't take precedence, they'd have to fall back to the
+non-alias version of the command, and type out all the options they *do* want by
+hand.  This is annoying, so it's usually better to let the last one win.
 
 ### Counting Options
 
 To define an option that counts how many times it's been given, like SSH's `-v`,
-we can say:
+you can use something like this:
 
+    :::lisp
     (defparameter *option-verbosity*
       (adopt:make-option 'verbosity
         :short #\v
@@ -518,9 +539,10 @@ we can say:
 
 ### Single-Parameter Options
 
-To define an option that takes a parameter and only keeps the last one given, we
-can do something like:
+To define an option that takes a parameter and only keeps the last one given,
+you can do something like:
 
+    :::lisp
     (defparameter *option-repository*
       (adopt:make-option 'repository
         :parameter "PATTERN"
@@ -540,6 +562,7 @@ Writing that `lambda` out by hand every time would be tedious.  Adopt provides
 a function called `last` (as in "keep the *last* parameter given") that does
 exactly that:
 
+    :::lisp
     (defparameter *option-repository*
       (adopt:make-option 'repository
         :long "repository"
@@ -551,8 +574,9 @@ exactly that:
 ### Multiple-Parameter Options
 
 Collecting every parameter given can be done in a number of different ways.  One
-way could be:
+strategy could be:
 
+    :::lisp
     (defparameter *option-exclude*
       (adopt:make-option 'exclude
         :long "exclude"
@@ -567,6 +591,7 @@ arguments flipped.  Common Lisp doesn't have a function like Haskell's
 [flip](https://en.wikibooks.org/wiki/Haskell/Higher-order_functions#Flipping_arguments),
 so Adopt provides it:
 
+    :::lisp
     (defparameter *option-exclude*
       (adopt:make-option 'exclude
         :long "exclude"
@@ -577,10 +602,12 @@ so Adopt provides it:
 
 Note that the result of this will be a fresh list of all the given parameters,
 but their order will be reversed because `cons` adds each new parameter to the
-front of the list.  If the order doesn't matter, you're all set.  Otherwise,
-there are several ways to get around this problem.  The first is to add the
-parameter to the end of the list in the `:reduce` function:
+front of the list.  If the order doesn't matter for what you're going to do with
+it, you're all set.  Otherwise, there are several ways to get around this
+problem.  The first is to add the parameter to the end of the list in the
+`:reduce` function:
 
+    :::lisp
     (defparameter *option-exclude*
       (adopt:make-option 'exclude
         :long "exclude"
@@ -593,25 +620,26 @@ parameter to the end of the list in the `:reduce` function:
 This is tedious and inefficient if you have a lot of arguments.  If you don't
 care much about argument parsing speed, Adopt provides a function called
 `collect` that does exactly this, so you don't have to type out that `lambda`
-yourself:
+yourself (and `nil` is the default initial value, so you don't need that
+either):
 
+    :::lisp
     (defparameter *option-exclude*
       (adopt:make-option 'exclude
         :long "exclude"
         :parameter "PATTERN"
         :help "exclude PATTERN (may be given multiple times)"
-        :initial-value nil
         :reduce #'adopt:collect))
 
-A more efficient (though slightly uglier) solution could be to use `nreverse` at
+A more efficient (though slightly uglier) solution would be to use `nreverse` at
 the end:
 
+    :::lisp
     (defparameter *option-exclude*
       (adopt:make-option 'exclude
         :long "exclude"
         :parameter "PATTERN"
         :help "exclude PATTERN (may be given multiple times)"
-        :initial-value nil
         :reduce (adopt:flip #'cons)
         :finally #'nreverse))
 
@@ -620,25 +648,24 @@ probably don't) you could use a queue library, or use a vector and
 `vector-push-extend`, or anything else you might dream up.  The combination of
 `:reduce`, `:initial-value`, and `:finally` will let you do just about anything.
 
-
 Required Options
 ----------------
 
 Adopt doesn't have a concept of a required option.  Not only is "required
 option" an oxymoron, but it's almost never what you want — if a user types
-`program --help` they shouldn't get an error about a missing required option.
+`foo --help` they shouldn't get an error about a missing required option.
 
 In cases where you really do need to require an option (perhaps only if some
 other one is also given) you can check it yourself:
 
+    :::lisp
     (defun toplevel ()
       (handler-case
-          (multiple-value-bind (arguments options)
-              (adopt:parse-options *ui*)
+          (multiple-value-bind (arguments options) (adopt:parse-options *ui*)
             (when (gethash 'help options)
               (adopt:print-help-and-exit *ui*))
             (unless (gethash 'some-required-option options)
-              (adopt:print-error-and-exit "Required option foo is missing."))
+              (error "Required option foo is missing."))
             (run …))
         (error (c)
           (adopt:print-error-and-exit c))))
@@ -652,6 +679,7 @@ users to understand.  Groups can have their own name, title, and help text.
 Here's a example of how this works.  It's fairly long, but shows how Adopt can
 help you make a command line interface with all the fixins:
 
+    :::lisp
     (defparameter *option-help*
       (adopt:make-option 'help
         :help "display help and exit"
@@ -751,35 +779,36 @@ help you make a command line interface with all the fixins:
 And with all that out of the way, you've got some nicely-organized help text
 for your users:
 
+    :::lisp
     (adopt:print-help *ui* :width 60 :option-width 16)
     ; =>
-    search - print lines that match a regular expression
-
-    USAGE: /usr/local/bin/sbcl PATTERN [FILE...]
-
-    Search FILEs for lines that match the regular expression
-    PATTERN and print them to standard out.  Several options are
-    available to control how the matching lines are printed.
-
-    If no files are given (or if - is given as a filename)
-    standard input will be searched.
-
-    Options:
-      -h, --help        display help and exit
-
-    Matching Options:
-      -l, --literal     treat PATTERN as a literal string
-                        instead of a regex
-      -L, --no-literal  treat PATTERN as a regex (the default)
-      -c, --case-sensitive
-                        match case-sensitively (the default)
-      -C, --case-insensitive
-                        ignore case when matching
-
-    Output Options:
-      --color           highlight matches with color
-      --no-color        don't highlight matches (the default)
-      -U N, --context N show N lines of context (default 0)
+    ; search - print lines that match a regular expression
+    ;
+    ; USAGE: /usr/local/bin/sbcl PATTERN [FILE...]
+    ;
+    ; Search FILEs for lines that match the regular expression
+    ; PATTERN and print them to standard out.  Several options are
+    ; available to control how the matching lines are printed.
+    ;
+    ; If no files are given (or if - is given as a filename)
+    ; standard input will be searched.
+    ;
+    ; Options:
+    ;   -h, --help        display help and exit
+    ;
+    ; Matching Options:
+    ;   -l, --literal     treat PATTERN as a literal string
+    ;                     instead of a regex
+    ;   -L, --no-literal  treat PATTERN as a regex (the default)
+    ;   -c, --case-sensitive
+    ;                     match case-sensitively (the default)
+    ;   -C, --case-insensitive
+    ;                     ignore case when matching
+    ;
+    ; Output Options:
+    ;   --color           highlight matches with color
+    ;   --no-color        don't highlight matches (the default)
+    ;   -U N, --context N show N lines of context (default 0)
 
 Error Handling
 --------------
@@ -791,64 +820,65 @@ However, when Adopt is parsing the command line options it *will* signal an
 error of type `adopt:unrecognized-option` if the user passes a command line
 option that wasn't defined in the interface:
 
+    :::lisp
     (defparameter *ui*
       (adopt:make-interface
         :name "meow"
         :summary "say meow"
         :usage "[OPTIONS]"
         :help "Say meow.  Like a cat."
-        :contents (list
-                    (make-option 'times
-                      :parameter "N"
-                      :long "times"
-                      :initial-value 1
-                      :help "say meow N times (default 1)"
-                      :reduce #'adopt:last
-                      :key #'parse-integer))))
+        :contents (list (make-option 'times
+                          :parameter "N"
+                          :long "times"
+                          :initial-value 1
+                          :help "say meow N times (default 1)"
+                          :reduce #'adopt:last
+                          :key #'parse-integer))))
 
     (adopt:parse-options *ui* '("--times" "5"))
     ; =>
-    NIL
-    {TIMES: 5}
+    ; NIL
+    ; {TIMES: 5}
 
     (adopt:parse-options *ui* '("--bark"))
     ; =>
-    No such option "--bark".
-       [Condition of type UNRECOGNIZED-OPTION]
-
-    Restarts:
-      R 0.  DISCARD-OPTION    - Discard the unrecognized option.
-      R 1.  TREAT-AS-ARGUMENT - Treat the unrecognized option as a plain argument.
-      R 2.  SUPPLY-NEW-VALUE  - Supply a new value to parse.
-      R 3.  RETRY             - Retry SLIME REPL evaluation request.
-      R 4. *ABORT             - Return to SLIME's top level.
-      R 5.  ABORT             - abort thread (#<THREAD "repl-thread" RUNNING {100AF48413}>)
+    ; No such option "--bark".
+    ;    [Condition of type UNRECOGNIZED-OPTION]
+    ;
+    ; Restarts:
+    ;   R 0.  DISCARD-OPTION    - Discard the unrecognized option.
+    ;   R 1.  TREAT-AS-ARGUMENT - Treat the unrecognized option as a plain argument.
+    ;   R 2.  SUPPLY-NEW-VALUE  - Supply a new value to parse.
+    ;   R 3.  RETRY             - Retry SLIME REPL evaluation request.
+    ;   R 4. *ABORT             - Return to SLIME's top level.
+    ;   R 5.  ABORT             - abort thread (#<THREAD "repl-thread" RUNNING {100AF48413}>)
 
 Adopt provides three possible restarts for this condition as seen above.  Adopt
 also provides functions with the same names that invoke the restarts properly,
 to make it easier to use them programatically with `handler-bind`.  For example:
 
+    :::lisp
     (handler-bind
         ((adopt:unrecognized-option 'adopt:discard-option))
       (adopt:parse-options *ui* '("--bark")))
     ; =>
-    NIL
-    {TIMES: 1}
+    ; NIL
+    ; {TIMES: 1}
 
     (handler-bind
         ((adopt:unrecognized-option 'adopt:treat-as-argument))
       (adopt:parse-options *ui* '("--bark")))
     ; =>
-    ("--bark")
-    {TIMES: 1}
+    ; ("--bark")
+    ; {TIMES: 1}
 
     (handler-bind
         ((adopt:unrecognized-option
            (alexandria:rcurry 'adopt:supply-new-value "--times")))
       (adopt:parse-options *ui* '("--bark" "5")))
     ; =>
-    NIL
-    {TIMES: 5}
+    ; NIL
+    ; {TIMES: 5}
 
 Generating Man Pages
 --------------------
@@ -856,6 +886,7 @@ Generating Man Pages
 We've already seen that Adopt can print a pretty help document, but it can also
 render `man` pages for you:
 
+    :::lisp
     (with-open-file (out "man/man1/search.1"
                       :direction :output
                       :if-exists :supersede)
@@ -866,6 +897,7 @@ default.  If you want to override this (e.g. to provide a short summary of an
 option in the help text, but elaborate more in the manual), you can use the
 `:manual` argument to `make-interface` and `make-option`:
 
+    :::lisp
     (defparameter *option-exclude*
       (adopt:make-option 'exclude
         :long "exclude"
@@ -877,13 +909,19 @@ option in the help text, but elaborate more in the manual), you can use the
 In order for `man` to find the pages, they need to be in the correct place.  By
 default `man` is usually smart enough to look next to every directory in your
 `$PATH` to find a directory called `man`.  So if you put your binaries in
-`/home/me/bin/` you can put your man pages in `/home/me/man/` under the
+`/home/me/bin/` you can put your `man` pages in `/home/me/man/` under the
 appropriate subdirectories and it should all Just Work™.  Consult the `man`
 documentation for more information.
 
 Implementation Specifics
 ------------------------
 
+TODO: talk about Lisp runtime options vs program options.
+
 ### SBCL
 
+You'll want to use `:save-runtime-options t` in the call to `sb-ext:save-lisp-and-die`.
+
 ### ClozureCL
+
+See <https://github.com/Clozure/ccl/issues/177>.

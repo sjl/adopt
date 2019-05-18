@@ -11,9 +11,6 @@ Python's optparse and argparse.
 Adopt aims to be a simple, robust option parser.  It can automatically print
 help information and even generate `man` pages for you.
 
-The test suite currently passes in SBCL, CCL, ECL, and ABCL on Ubuntu.  Further
-testing is welcome.
-
 Adopt is compatible with Quicklisp, but not *in* Quicklisp (yet).  You can clone
 the repository into your [Quicklisp local-projects directory][local] for now.
 
