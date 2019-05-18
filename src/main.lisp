@@ -477,10 +477,16 @@
   (dolist (group (groups interface))
     (when (options group)
       (format stream "~%~A:~%" (or (title group) (name group) "Options"))
-      (let* ((option-column 2)
+      (let* ((help (help group))
+             (help-column 2)
+             (help-width (- width help-column))
+             (option-column 2)
              (option-padding 2)
              (doc-column (+ option-column option-width option-padding))
              (doc-width (- width doc-column)))
+        (when help
+          (format stream "~%~{  ~A~^~%~}~2%"
+                  (bobbin:wrap (list help) help-width)))
         (dolist (option (options group))
           (print-option-help stream option option-column doc-column doc-width)))))
   (let* ((examples (examples interface))

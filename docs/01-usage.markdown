@@ -400,8 +400,7 @@ the overall structure of the programs you'll typically create with Adopt:
     (defun build ()
       (sb-ext:save-lisp-and-die "search" :executable t :toplevel #'toplevel))
 
-This is a typical way to use Adopt.  There are three functions important
-functions here:
+This is a typical way to use Adopt.  There are three important functions here:
 
 * The `toplevel` function takes care of parsing arguments and exiting with an
   appropriate status code if necessary.
@@ -713,10 +712,10 @@ help you make a command line interface with all the fixins:
 
     (defparameter *option-no-literal*
       (adopt:make-option 'no-literal
+        :result-key 'literal
         :help "treat PATTERN as a regex (the default)"
         :long "no-literal"
         :short #\L
-        :result-key 'literal
         :reduce (constantly nil)))
 
     (defparameter *option-case-sensitive*
@@ -758,10 +757,10 @@ help you make a command line interface with all the fixins:
         :reduce #'adopt:last
         :key #'parse-integer))
 
+
     (defparameter *group-matching*
       (adopt:make-group 'matching-options
         :title "Matching Options"
-        :help "These options affect how lines are matched."
         :options (list *option-literal*
                        *option-no-literal*
                        *option-case-sensitive*
@@ -770,10 +769,11 @@ help you make a command line interface with all the fixins:
     (defparameter *group-output*
       (adopt:make-group 'output-options
         :title "Output Options"
-        :help "These options affect how matching lines are printed."
+        :help "These options affect how matching lines are printed.  The defaults are ideal for piping into other programs."
         :options (list *option-color*
                        *option-no-color*
                        *option-context*)))
+
 
     (adopt:define-string *help-text*
       "Search FILEs for lines that match the regular expression ~
@@ -823,9 +823,13 @@ for your users:
     ;                     ignore case when matching
     ;
     ; Output Options:
+    ;
+    ;   These options affect how matching lines are printed.  The
+    ;   defaults are ideal for piping into other programs.
+    ;
     ;   --color           highlight matches with color
     ;   --no-color        don't highlight matches (the default)
-    ;   -U N, --context N show N lines of context (default 0)
+    ;   -u N, --context N show N lines of context (default 0)
 
 Error Handling
 --------------
