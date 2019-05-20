@@ -90,6 +90,12 @@
             :collect `(,slot :initarg ,initarg :accessor ,slot))))
 
 
+(defmacro check-types (&rest place-type-pairs)
+  `(progn
+     ,@(loop :for (place type) :on place-type-pairs :by #'cddr
+             :collect `(check-type ,place ,type))))
+
+
 ;;;; Definition ---------------------------------------------------------------
 (defclass* option
   name
@@ -131,6 +137,11 @@
              (null parameter))
     (error "Option ~A has reduce function ~A, which requires a :parameter."
            name reduce))
+  (check-types short (or null character)
+               long (or null string)
+               help string
+               manual (or null string)
+               parameter (or null string))
   (apply #'make-instance 'option
          :name name
          :result-key result-key
@@ -157,6 +168,10 @@
     (format stream "~A (~D options)" (name g) (length (options g)))))
 
 (defun make-group (name &key title help manual options)
+  (check-types title (or null string)
+               help (or null string)
+               manual (or null string)
+               options list)
   (make-instance 'group
     :name name
     :title title
@@ -196,6 +211,13 @@
             (length (groups i)))))
 
 (defun make-interface (&key name summary usage help manual examples contents)
+  (check-types name string
+               summary string
+               usage string
+               help string
+               manual (or null string)
+               examples list
+               contents list)
   (let* ((ungrouped-options (remove-if-not #'optionp contents))
          (groups (cons (make-default-group ungrouped-options)
                        (remove-if-not #'groupp contents)))
