@@ -24,7 +24,6 @@
     :supply-new-value
 
     :flip
-    :oldest
     :collect
     :first
     :last
