@@ -140,7 +140,7 @@ Create and return a command line interface.
 
   * `name` (**required**): a symbol naming the interface.
   * `summary` (**required**): a string of a concise, one-line summary of what the program does.
-  * `usage` (**required**): a string of a UNIX-style usage summary, e.g. "[OPTIONS] PATTERN [FILE...]".
+  * `usage` (**required**): a string of a UNIX-style usage summary, e.g. `"[OPTIONS] PATTERN [FILE...]"`.
   * `help` (**required**): a string of a longer description of the program.
   * `manual` (optional): a string to use in place of `help` when rendering a man page.
   * `examples` (optional): an alist of `(prose . command)` conses to render as a list of examples.
