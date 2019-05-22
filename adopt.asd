@@ -4,7 +4,7 @@
   :homepage "https://sjl.bitbucket.io/adopt/"
 
   :license "MIT"
-  :version "0.0.1"
+  :version "1.0.0"
 
   :depends-on (:bobbin :split-sequence)
 
