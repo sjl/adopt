@@ -38,31 +38,45 @@
        (is (equal ,expected-args ,args))
        (is (hash-table-equal ,expected-result ,result)))))
 
+(defun ct () (constantly t))
+
 
 ;;;; Tests --------------------------------------------------------------------
 (defparameter *noop*
-  (adopt:make-interface))
+  (adopt:make-interface
+    :name "noop"
+    :summary "no options"
+    :help "this interface has no options"
+    :usage ""))
 
 (defparameter *option-types*
   (adopt:make-interface
+    :name "option-types"
+    :summary "testing option types"
+    :help "this interface tests both option types"
+    :usage "[OPTIONS]"
     :contents
     (list
       (adopt:make-option 'long
         :help "long only"
         :long "long"
-        :reduce (constantly t))
+        :reduce (ct))
       (adopt:make-option 'short
         :help "short only"
         :short #\s
-        :reduce (constantly t))
+        :reduce (ct))
       (adopt:make-option 'both
         :help "both short and long"
         :short #\b
         :long "both"
-        :reduce (constantly t)))))
+        :reduce (ct)))))
 
 (defparameter *reducers*
   (adopt:make-interface
+    :name "reducers"
+    :summary "testing reducers"
+    :help "this interface tests basic reducers"
+    :usage "[OPTIONS]"
     :contents
     (list
       (adopt:make-option 'c1
@@ -94,6 +108,10 @@
 
 (defparameter *same-key*
   (adopt:make-interface
+    :name "same-key"
+    :summary "testing same keys"
+    :help "this interface tests options with the same result-key"
+    :usage "[OPTIONS]"
     :contents
     (list
       (adopt:make-option '1
@@ -109,6 +127,10 @@
 
 (defparameter *initial-value*
   (adopt:make-interface
+    :name "initial-value"
+    :summary "testing initial values"
+    :help "this interface tests the initial-value argument"
+    :usage "[OPTIONS]"
     :contents
     (list
       (adopt:make-option 'foo
@@ -120,6 +142,10 @@
 
 (defparameter *finally*
   (adopt:make-interface
+    :name "finally"
+    :summary "testing finally"
+    :help "this interface tests the finally argument"
+    :usage "[OPTIONS]"
     :contents
     (list
       (adopt:make-option 'yell
@@ -140,8 +166,12 @@
                    (assert (string= "a" a))
                    :ok)))))
 
-(defparameter *keys*
+(defparameter *key*
   (adopt:make-interface
+    :name "key"
+    :summary "testing key"
+    :help "this interface tests the key argument"
+    :usage "[OPTIONS]"
     :contents
     (list
       (adopt:make-option 'int
@@ -196,7 +226,12 @@
          '("foo" "bar")
          (result 'short t
                  'long t
-                 'both t)))
+                 'both t))
+  ;; Make sure we require at least one of short/long.
+  (is
+    (adopt:make-option 'foo :reduce (ct) :help "this should work" :short #\x))
+  (signals error
+    (adopt:make-option 'foo :reduce (ct) :help "this should not work")))
 
 (define-test reducers
   (check *reducers* ""
@@ -248,12 +283,12 @@
          '("x" "y")
          (result 'foo "goodbye")))
 
-(define-test keys
-  (check *keys* ""
+(define-test key
+  (check *key* ""
          '()
          (result 'len '()
                  'int '()))
-  (check *keys* "--int 123 --int 0 --len abc --len 123456"
+  (check *key* "--int 123 --int 0 --len abc --len 123456"
          '()
          (result 'int '(123 0)
                  'len '(3 6))))
@@ -272,3 +307,20 @@
   (is (equal '(:a) (adopt:collect '() :a)))
   (is (equal '(:a :b) (adopt:collect '(:a) :b)))
   (is (equal '(2 . 1) (funcall (adopt:flip 'cons) 1 2))))
+
+(define-test duplicate-options
+  (is
+    (adopt:make-interface
+      :name "" :summary "" :help "" :usage "" :contents
+      (list (adopt:make-option 'foo :reduce (ct) :help "" :short #\a :long "foo")
+            (adopt:make-option 'bar :reduce (ct) :help "" :short #\b :long "bar"))))
+  (signals error
+    (adopt:make-interface
+      :name "" :summary "" :help "" :usage "" :contents
+      (list (adopt:make-option 'foo :reduce (ct) :help "" :short #\a :long "foo")
+            (adopt:make-option 'bar :reduce (ct) :help "" :short #\a :long "bar"))))
+  (signals error
+    (adopt:make-interface
+      :name "" :summary "" :help "" :usage "" :contents
+      (list (adopt:make-option 'foo :reduce (ct) :help "" :short #\a :long "oops")
+            (adopt:make-option 'bar :reduce (ct) :help "" :short #\b :long "oops")))))

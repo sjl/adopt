@@ -237,8 +237,12 @@
              (let ((short (short option))
                    (long (long option)))
                (when short
+                 (when (gethash short (short-options interface))
+                   (error "Duplicate short option ~S." short))
                  (setf (gethash short (short-options interface)) option))
                (when long
+                 (when (gethash long (long-options interface))
+                   (error "Duplicate long option ~S." long))
                  (setf (gethash long (long-options interface)) option)))))
       (dolist (g groups)
         (map nil #'add-option (options g))))
