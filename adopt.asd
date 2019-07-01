@@ -22,7 +22,7 @@
   :author "Steve Losh <steve@stevelosh.com>"
   :license "MIT"
 
-  :depends-on (:adopt :1am :losh)
+  :depends-on (:adopt :1am)
 
   :serial t
   :components ((:module "test"
