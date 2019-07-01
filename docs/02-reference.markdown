@@ -18,9 +18,9 @@ don't touch it.
 
 Return a list of the program name and command line arguments.
 
-  This is not implemented for every Common Lisp implementation.  You can always
-  pass your own values to `parse-options` and `print-help` if it's not
-  implemented for your particular Lisp.
+  This is not implemented for every Common Lisp implementation.  You can pass
+  your own values to `parse-options` and `print-help` if it's not implemented
+  for your particular Lisp.
 
   
 
@@ -61,6 +61,14 @@ Invoke the `discard-option` restart properly.
 ### `EXIT` (function)
 
     (EXIT &OPTIONAL (CODE 0))
+
+Exit the program with status `code`.
+
+  This is not implemented for every Common Lisp implementation.  You can write
+  your own version of it and pass it to `print-help-and-exit` and
+  `print-error-and-exit` if it's not implemented for your particular Lisp.
+
+  
 
 ### `FIRST` (function)
 
@@ -106,14 +114,74 @@ Return `new`.
 
     (MAKE-GROUP NAME &KEY TITLE HELP MANUAL OPTIONS)
 
+Create and return an option group, suitable for use in an interface.
+
+  This function takes a number of arguments that define how the group is
+  presented to the user:
+
+  * `name` (**required**): a symbol naming the group.
+  * `title` (optional): a title for the group for use in the help text.
+  * `help` (optional): a short summary of this group of options for use in the help text.
+  * `manual` (optional): used in place of `help` when rendering a man page.
+  * `options` (**required**): the options to include in the group.
+
+  See the full documentation for more information.
+
+  
+
 ### `MAKE-INTERFACE` (function)
 
     (MAKE-INTERFACE &KEY NAME SUMMARY USAGE HELP MANUAL EXAMPLES CONTENTS)
 
+Create and return a command line interface.
+
+  This function takes a number of arguments that define how the interface is
+  presented to the user:
+
+  * `name` (**required**): a symbol naming the interface.
+  * `summary` (**required**): a string of a concise, one-line summary of what the program does.
+  * `usage` (**required**): a string of a UNIX-style usage summary, e.g. `"[OPTIONS] PATTERN [FILE...]"`.
+  * `help` (**required**): a string of a longer description of the program.
+  * `manual` (optional): a string to use in place of `help` when rendering a man page.
+  * `examples` (optional): an alist of `(prose . command)` conses to render as a list of examples.
+  * `contents` (optional): a list of options and groups.  Ungrouped options will be collected into a single top-level group.
+
+  See the full documentation for more information.
+
+  
+
 ### `MAKE-OPTION` (function)
 
-    (MAKE-OPTION NAME &KEY LONG SHORT HELP MANUAL PARAMETER REDUCE (RESULT-KEY NAME)
-                 (INITIAL-VALUE NIL INITIAL-VALUE?) (KEY #'IDENTITY) (FINALLY #'IDENTITY))
+    (MAKE-OPTION NAME &KEY LONG SHORT HELP MANUAL PARAMETER REDUCE
+                 (INITIAL-VALUE NIL INITIAL-VALUE?) (RESULT-KEY NAME) (KEY #'IDENTITY)
+                 (FINALLY #'IDENTITY))
+
+Create and return an option, suitable for use in an interface.
+
+  This function takes a number of arguments, some required, that define how the
+  option interacts with the user.
+
+  * `name` (**required**): a symbol naming the option.
+  * `help` (**required**): a short string describing what the option does.
+  * `result-key` (optional): a symbol to use as the key for this option in the hash table of results.
+  * `long` (optional): a string for the long form of the option (e.g. `--foo`).
+  * `short` (optional): a character for the short form of the option (e.g. `-f`).  At least one of `short` and `long` must be given.
+  * `manual` (optional): a string to use in place of `help` when rendering a man page.
+  * `parameter` (optional): a string.  If given, it will turn this option into a parameter-taking option (e.g. `--foo=bar`) and will be used as a placeholder
+  in the help text.
+  * `reduce` (**required**): a function designator that will be called every time the option is specified by the user.
+  * `initial-value` (optional): a value to use as the initial value of the option.
+  * `key` (optional): a function designator, only allowed for parameter-taking options, to be called on the values given by the user before they are passed along to the reducing function.  It will not be called on the initial value.
+  * `finally` (optional): a function designator to be called on the final result after all parsing is complete. 
+
+  The manner in which the reducer is called depends on whether the option takes a parameter:
+
+  * For options that don't take parameters, it will be called with the old value.
+  * For options that take parameters, it will be called with the old value and the value given by the user.
+
+  See the full documentation for more information.
+
+  
 
 ### `PARSE-OPTIONS` (function)
 
@@ -133,7 +201,8 @@ Parse `arguments` according to `interface`.
 
 ### `PRINT-ERROR-AND-EXIT` (function)
 
-    (PRINT-ERROR-AND-EXIT ERROR &KEY (STREAM *ERROR-OUTPUT*) (EXIT-CODE 1) (PREFIX error: ))
+    (PRINT-ERROR-AND-EXIT ERROR &KEY (STREAM *ERROR-OUTPUT*) (EXIT-FUNCTION #'EXIT) (EXIT-CODE 1)
+                          (PREFIX error: ))
 
 Print `prefix` and `error` to `stream` and exit.
 
@@ -192,7 +261,8 @@ Print a pretty help document for `interface` to `stream`.
 ### `PRINT-HELP-AND-EXIT` (function)
 
     (PRINT-HELP-AND-EXIT INTERFACE &KEY (STREAM *STANDARD-OUTPUT*) (PROGRAM-NAME (CAR (ARGV)))
-                         (WIDTH 80) (OPTION-WIDTH 20) (INCLUDE-EXAMPLES T) (EXIT-CODE 0))
+                         (WIDTH 80) (OPTION-WIDTH 20) (INCLUDE-EXAMPLES T) (EXIT-FUNCTION #'EXIT)
+                         (EXIT-CODE 0))
 
 Print a pretty help document for `interface` to `stream` and exit.
 
@@ -202,11 +272,23 @@ Print a pretty help document for `interface` to `stream` and exit.
       (when (gethash 'help options)
         (print-help-and-exit *ui*))
       (run arguments options))
+
   
 
 ### `PRINT-MANUAL` (function)
 
     (PRINT-MANUAL INTERFACE &KEY (STREAM *STANDARD-OUTPUT*) (MANUAL-SECTION 1))
+
+Print a troff-formatted man page for `interface` to `stream`.
+
+  Example:
+
+    (with-open-file (manual "man/man1/foo.1"
+                            :direction :output
+                            :if-exists :supersede)
+      (print-manual *ui* manual))
+
+  
 
 ### `SUPPLY-NEW-VALUE` (function)
 

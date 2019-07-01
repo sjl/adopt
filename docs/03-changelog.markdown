@@ -5,7 +5,9 @@ Here's the list of changes in each released version.
 
 [TOC]
 
-Current Development Version
----------------------------
+1.0.0
+-----
 
-Adopt is still in active development.  No promises yet.
+Initial release.
+
+

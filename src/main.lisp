@@ -55,9 +55,9 @@
 (defun argv ()
   "Return a list of the program name and command line arguments.
 
-  This is not implemented for every Common Lisp implementation.  You can always
-  pass your own values to `parse-options` and `print-help` if it's not
-  implemented for your particular Lisp.
+  This is not implemented for every Common Lisp implementation.  You can pass
+  your own values to `parse-options` and `print-help` if it's not implemented
+  for your particular Lisp.
 
   "
   #+sbcl sb-ext:*posix-argv*
@@ -68,6 +68,13 @@
   #-(or sbcl ccl ecl) (error "ARGV is not supported on this implementation."))
 
 (defun exit (&optional (code 0))
+  "Exit the program with status `code`.
+
+  This is not implemented for every Common Lisp implementation.  You can write
+  your own version of it and pass it to `print-help-and-exit` and
+  `print-error-and-exit` if it's not implemented for your particular Lisp.
+
+  "
   #+sbcl (sb-ext:exit :code code)
   #+ccl (ccl:quit code)
   #-(or sbcl ccl) (error "EXIT is not supported on this implementation."))
@@ -89,6 +96,12 @@
      ,(loop :for slot :in slots
             :for initarg = (intern (symbol-name slot) :keyword)
             :collect `(,slot :initarg ,initarg :accessor ,slot))))
+
+
+(defmacro check-types (&rest place-type-pairs)
+  `(progn
+     ,@(loop :for (place type) :on place-type-pairs :by #'cddr
+             :collect `(check-type ,place ,type))))
 
 
 ;;;; Definition ---------------------------------------------------------------
@@ -116,10 +129,38 @@
                     manual
                     parameter
                     reduce
-                    (result-key name)
+                    ;; can't just default to nil because multiple options might
+                    ;; have the same result key, and only one can provide init
                     (initial-value nil initial-value?)
+                    (result-key name)
                     (key #'identity)
                     (finally #'identity))
+  "Create and return an option, suitable for use in an interface.
+
+  This function takes a number of arguments, some required, that define how the
+  option interacts with the user.
+
+  * `name` (**required**): a symbol naming the option.
+  * `help` (**required**): a short string describing what the option does.
+  * `result-key` (optional): a symbol to use as the key for this option in the hash table of results.
+  * `long` (optional): a string for the long form of the option (e.g. `--foo`).
+  * `short` (optional): a character for the short form of the option (e.g. `-f`).  At least one of `short` and `long` must be given.
+  * `manual` (optional): a string to use in place of `help` when rendering a man page.
+  * `parameter` (optional): a string.  If given, it will turn this option into a parameter-taking option (e.g. `--foo=bar`) and will be used as a placeholder
+  in the help text.
+  * `reduce` (**required**): a function designator that will be called every time the option is specified by the user.
+  * `initial-value` (optional): a value to use as the initial value of the option.
+  * `key` (optional): a function designator, only allowed for parameter-taking options, to be called on the values given by the user before they are passed along to the reducing function.  It will not be called on the initial value.
+  * `finally` (optional): a function designator to be called on the final result after all parsing is complete. 
+
+  The manner in which the reducer is called depends on whether the option takes a parameter:
+
+  * For options that don't take parameters, it will be called with the old value.
+  * For options that take parameters, it will be called with the old value and the value given by the user.
+
+  See the full documentation for more information.
+
+  "
   (when (and (null long) (null short))
     (error "Option ~A requires at least one of :long/:short." name))
   (when (null reduce)
@@ -132,19 +173,24 @@
              (null parameter))
     (error "Option ~A has reduce function ~A, which requires a :parameter."
            name reduce))
+  (check-types short (or null character)
+               long (or null string)
+               help string
+               manual (or null string)
+               parameter (or null string))
   (apply #'make-instance 'option
-         :name name
-         :result-key result-key
-         :help help
-         :manual manual
-         :long long
-         :short short
-         :parameter parameter
-         :reduce reduce
-         :key key
-         :finally finally
-         (when initial-value?
-           (list :initial-value initial-value))))
+    :name name
+    :result-key result-key
+    :help help
+    :manual manual
+    :long long
+    :short short
+    :parameter parameter
+    :reduce reduce
+    :key key
+    :finally finally
+    (when initial-value?
+      (list :initial-value initial-value))))
 
 (defun optionp (object)
   (typep object 'option))
@@ -158,6 +204,28 @@
     (format stream "~A (~D options)" (name g) (length (options g)))))
 
 (defun make-group (name &key title help manual options)
+  "Create and return an option group, suitable for use in an interface.
+
+  This function takes a number of arguments that define how the group is
+  presented to the user:
+
+  * `name` (**required**): a symbol naming the group.
+  * `title` (optional): a title for the group for use in the help text.
+  * `help` (optional): a short summary of this group of options for use in the help text.
+  * `manual` (optional): used in place of `help` when rendering a man page.
+  * `options` (**required**): the options to include in the group.
+
+  See the full documentation for more information.
+
+  "
+  (check-types name symbol
+               title (or null string)
+               help (or null string)
+               manual (or null string)
+               options list)
+  (assert (every #'optionp options) (options)
+    "The :options argument to ~S was not a list of options.  Got: ~S"
+    'make-group options)
   (make-instance 'group
     :name name
     :title title
@@ -197,6 +265,29 @@
             (length (groups i)))))
 
 (defun make-interface (&key name summary usage help manual examples contents)
+  "Create and return a command line interface.
+
+  This function takes a number of arguments that define how the interface is
+  presented to the user:
+
+  * `name` (**required**): a symbol naming the interface.
+  * `summary` (**required**): a string of a concise, one-line summary of what the program does.
+  * `usage` (**required**): a string of a UNIX-style usage summary, e.g. `\"[OPTIONS] PATTERN [FILE...]\"`.
+  * `help` (**required**): a string of a longer description of the program.
+  * `manual` (optional): a string to use in place of `help` when rendering a man page.
+  * `examples` (optional): an alist of `(prose . command)` conses to render as a list of examples.
+  * `contents` (optional): a list of options and groups.  Ungrouped options will be collected into a single top-level group.
+
+  See the full documentation for more information.
+
+  "
+  (check-types name string
+               summary string
+               usage string
+               help string
+               manual (or null string)
+               examples list
+               contents list)
   (let* ((ungrouped-options (remove-if-not #'optionp contents))
          (groups (cons (make-default-group ungrouped-options)
                        (remove-if-not #'groupp contents)))
@@ -216,11 +307,16 @@
              (let ((short (short option))
                    (long (long option)))
                (when short
+                 (when (gethash short (short-options interface))
+                   (error "Duplicate short option ~S." short))
                  (setf (gethash short (short-options interface)) option))
                (when long
+                 (when (gethash long (long-options interface))
+                   (error "Duplicate long option ~S." long))
                  (setf (gethash long (long-options interface)) option)))))
       (dolist (g groups)
         (map nil #'add-option (options g))))
+    ;; TODO: check for multiple conflicting initial-values
     interface))
 
 
@@ -414,7 +510,7 @@
         (col 0))
     (flet ((print-at (c string &optional newline)
              "Print `string` starting at column `c`, adding padding/newline if needed."
-             (when (> col c)
+             (when (>= col c)
                (terpri stream)
                (setf col 0))
              (format stream "~vA~A" (- c col) #\space string)
@@ -478,10 +574,16 @@
   (dolist (group (groups interface))
     (when (options group)
       (format stream "~%~A:~%" (or (title group) (name group) "Options"))
-      (let* ((option-column 2)
+      (let* ((help (help group))
+             (help-column 2)
+             (help-width (- width help-column))
+             (option-column 2)
              (option-padding 2)
              (doc-column (+ option-column option-width option-padding))
              (doc-width (- width doc-column)))
+        (when help
+          (format stream "~%~{  ~A~^~%~}~2%"
+                  (bobbin:wrap (list help) help-width)))
         (dolist (option (options group))
           (print-option-help stream option option-column doc-column doc-width)))))
   (let* ((examples (examples interface))
@@ -501,6 +603,7 @@
      (width 80)
      (option-width 20)
      (include-examples t)
+     (exit-function #'exit)
      (exit-code 0))
   "Print a pretty help document for `interface` to `stream` and exit.
 
@@ -510,17 +613,19 @@
       (when (gethash 'help options)
         (print-help-and-exit *ui*))
       (run arguments options))
+
   "
   (print-help interface
-               :stream stream
-               :program-name program-name
-               :width width
-               :option-width option-width
-               :include-examples include-examples)
-  (exit exit-code))
+              :stream stream
+              :program-name program-name
+              :width width
+              :option-width option-width
+              :include-examples include-examples)
+  (funcall exit-function exit-code))
 
 (defun print-error-and-exit (error &key
                              (stream *error-output*)
+                             (exit-function #'exit)
                              (exit-code 1)
                              (prefix "error: "))
   "Print `prefix` and `error` to `stream` and exit.
@@ -535,7 +640,7 @@
 
   "
   (format stream "~A~A~%" (or prefix "") error)
-  (exit exit-code))
+  (funcall exit-function exit-code))
 
 
 ;;;; Man ----------------------------------------------------------------------
@@ -579,6 +684,16 @@
 (defun print-manual (interface &key
                      (stream *standard-output*)
                      (manual-section 1))
+  "Print a troff-formatted man page for `interface` to `stream`.
+
+  Example:
+
+    (with-open-file (manual \"man/man1/foo.1\"
+                            :direction :output
+                            :if-exists :supersede)
+      (print-manual *ui* manual))
+
+  "
   (check-type manual-section (integer 1))
   (labels
       ((f (&rest args)
