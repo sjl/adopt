@@ -64,7 +64,8 @@
   #+ccl (destructuring-bind (program-name &rest arguments)
             ccl:*command-line-argument-list*
             (cons program-name (rest (member "--" arguments :test #'string=))))
-  #-(or sbcl ccl) (error "ARGV is not supported on this implementation."))
+  ;; #+ecl (ext:command-args)
+  #-(or sbcl ccl ecl) (error "ARGV is not supported on this implementation."))
 
 (defun exit (&optional (code 0))
   #+sbcl (sb-ext:exit :code code)
