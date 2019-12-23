@@ -199,6 +199,25 @@ Parse `arguments` according to `interface`.
 
   
 
+### `PARSE-OPTIONS-OR-EXIT` (function)
+
+    (PARSE-OPTIONS-OR-EXIT INTERFACE &OPTIONAL (ARGUMENTS (REST (ARGV))))
+
+Parse `arguments` according to `interface`, exiting if any error occurs.
+
+  Two values are returned:
+
+  1. A fresh list of top-level, unaccounted-for arguments that don't correspond
+     to any options defined in `interface`.
+  2. An `EQL` hash table of option keys to values.
+
+  If an error occurs while parsing the arguments, exits immediately as if with
+  `adopt:print-error-and-exit`.
+
+  See the full documentation for more information.
+
+  
+
 ### `PRINT-ERROR-AND-EXIT` (function)
 
     (PRINT-ERROR-AND-EXIT ERROR &KEY (STREAM *ERROR-OUTPUT*) (EXIT-FUNCTION #'EXIT) (EXIT-CODE 1)
