@@ -4,8 +4,8 @@ Adopt is a simple UNIX-style option parser in Common Lisp, heavily influenced by
 Python's optparse and argparse.
 
 * **License:** MIT
-* **Documentation:** <https://sjl.bitbucket.io/adopt/>
-* **Mercurial:** <https://bitbucket.org/sjl/adopt/>
+* **Documentation:** <https://docs.stevelosh.com/adopt/>
+* **Mercurial:** <https://hg.sr.ht/~sjl/adopt/>
 * **Git:** <https://github.com/sjl/adopt/>
 
 Adopt aims to be a simple, robust option parser.  It can automatically print

@@ -104,6 +104,12 @@
              :collect `(check-type ,place ,type))))
 
 
+(defmacro quit-on-ctrl-c ((&key (code 130)) &body body)
+  `(handler-case
+     (progn ,@body)
+     #+sbcl (sb-sys:interactive-interrupt () (adopt:exit ,code))))
+
+
 ;;;; Definition ---------------------------------------------------------------
 (defclass* option
   name
@@ -478,6 +484,24 @@
                      (cons v remaining))))))))
       (recur arguments))))
 
+(defun parse-options-or-exit (interface &optional (arguments (rest (argv))))
+  "Parse `arguments` according to `interface`, exiting if any error occurs.
+
+  Two values are returned:
+
+  1. A fresh list of top-level, unaccounted-for arguments that don't correspond
+     to any options defined in `interface`.
+  2. An `EQL` hash table of option keys to values.
+
+  If an error occurs while parsing the arguments, exits immediately as if with
+  `adopt:print-error-and-exit`.
+
+  See the full documentation for more information.
+
+  "
+  (handler-case (adopt:parse-options ui)
+    (error (c) (adopt:print-error-and-exit c))))
+
 
 ;;;; Help ---------------------------------------------------------------------
 (defun option-string (option)
@@ -572,7 +596,7 @@
   (format stream (bobbin:wrap (help interface) width))
   (format stream "~%")
   (dolist (group (groups interface))
-    (when (options group)
+    (when (or (options group) (help group))
       (format stream "~%~A:~%" (or (title group) (name group) "Options"))
       (let* ((help (help group))
              (help-column 2)

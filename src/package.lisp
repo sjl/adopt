@@ -8,6 +8,7 @@
     :make-interface
 
     :parse-options
+    :parse-options-or-exit
 
     :print-help
     :print-help-and-exit

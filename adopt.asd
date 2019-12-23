@@ -1,7 +1,7 @@
 (asdf:defsystem :adopt
   :description "Simple, flexible, UNIX-style option parsing."
   :author "Steve Losh <steve@stevelosh.com>"
-  :homepage "https://sjl.bitbucket.io/adopt/"
+  :homepage "https://docs.stevelosh.com/adopt/"
 
   :license "MIT"
   :version "1.0.0"

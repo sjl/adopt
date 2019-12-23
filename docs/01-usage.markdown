@@ -114,7 +114,7 @@ remove them, which means you can include breaks in the output if you want to
 have multiple paragraphs in your help text.  Once again, `format` is your
 friend:
 
-[Bobbin]: https://sjl.bitbucket.io/bobbin/
+[Bobbin]: https://docs.stevelosh.com/bobbin/
 
     :::lisp
     (adopt:define-string *help-text*
