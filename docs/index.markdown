@@ -5,7 +5,7 @@ Python's optparse and argparse.
 
 * **License:** MIT
 * **Documentation:** <https://docs.stevelosh.com/adopt/>
-* **Mercurial:** <https://hg.sr.ht/~sjl/adopt/>
+* **Mercurial:** <https://hg.stevelosh.com/adopt/>
 * **Git:** <https://github.com/sjl/adopt/>
 
 Adopt aims to be a simple, robust option parser.  It can automatically print
