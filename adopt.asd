@@ -4,7 +4,7 @@
   :homepage "https://docs.stevelosh.com/adopt/"
 
   :license "MIT"
-  :version "1.0.0"
+  :version "1.0.1"
 
   :depends-on (:bobbin :split-sequence)
 
