@@ -499,7 +499,7 @@
   See the full documentation for more information.
 
   "
-  (handler-case (adopt:parse-options ui)
+  (handler-case (adopt:parse-options interface)
     (error (c) (adopt:print-error-and-exit c))))
 
 
