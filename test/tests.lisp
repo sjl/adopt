@@ -189,6 +189,21 @@
         :reduce #'adopt:collect
         :key #'length))))
 
+(adopt:defparameters (*bool* *no-bool*)
+  (adopt:make-boolean-options 'bool
+    :long "bool"
+    :short #\b
+    :help "Bool yes."
+    :help-no "Bool no."))
+
+(defparameter *bools*
+  (adopt:make-interface
+    :name "bools"
+    :summary "testing boolean options"
+    :help "this interface tests booleans"
+    :usage "[OPTIONS]"
+    :contents (list *bool* *no-bool*)))
+
 
 (define-test noop
   (check *noop* ""
@@ -324,3 +339,10 @@
       :name "" :summary "" :help "" :usage "" :contents
       (list (adopt:make-option 'foo :reduce (ct) :help "" :short #\a :long "oops")
             (adopt:make-option 'bar :reduce (ct) :help "" :short #\b :long "oops")))))
+
+(define-test boolean-options
+  (check *bools* "" '() (result 'bool nil))
+  (check *bools* "--bool" '() (result 'bool t))
+  (check *bools* "--bool --no-bool" '() (result 'bool nil))
+  (check *bools* "-b" '() (result 'bool t))
+  (check *bools* "-b -B" '() (result 'bool nil)))

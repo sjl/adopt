@@ -5,6 +5,11 @@ Here's the list of changes in each released version.
 
 [TOC]
 
+1.1.0
+-----
+
+Added `make-boolean-options` and `defparameters` for convenience.
+
 1.0.1
 -----
 

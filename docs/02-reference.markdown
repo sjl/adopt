@@ -44,6 +44,37 @@ Append element `el` to the end of `list`.
 
 Convenience macro for `(defparameter ,var (format nil ,string ,@args))`.
 
+### `DEFPARAMETERS` (macro)
+
+    (DEFPARAMETERS PARAMETERS VALUES-FORM)
+
+Convenience macro for `defparameter`ing multiple variables at once.
+
+  `parameters` must be a list of special variable names suitable for giving to
+  `defparameter`.
+
+  `values-form` must be an expression that returns as many values as parameters
+  in the parameter list.  Each parameter will be set to the corresponding value.
+
+  This can be handy when using `make-boolean-options` to create two `option`s at
+  once and assign them to special variables.
+
+  Examples:
+
+    (defparameters (*a* *b*) (truncate 100 3))
+    (list *a* *b*)
+    ; =>
+    ; (33 1)
+
+    (defparameters (*option-foo* *option-no-foo*)
+      (make-boolean-options 'foo
+        :help "Foo the widgets during the run."
+        :help-no "Do not foo the widgets during the run (the default)."
+        :long "foo"
+        :short #f))
+
+  
+
 ### `DISCARD-OPTION` (function)
 
     (DISCARD-OPTION CONDITION)
@@ -107,6 +138,53 @@ Return `new`.
 
   It is useful as a `:reduce` function when you want to just keep the last-given
   value for an option.
+
+  
+
+### `MAKE-BOOLEAN-OPTIONS` (function)
+
+    (MAKE-BOOLEAN-OPTIONS NAME &KEY
+                          (NAME-NO (INTERN (CONCATENATE 'STRING (STRING 'NO-) (STRING NAME)))) LONG
+                          (LONG-NO (WHEN LONG (FORMAT NIL no-~A LONG))) SHORT
+                          (SHORT-NO (WHEN SHORT (CHAR-UPCASE SHORT))) (RESULT-KEY NAME) HELP
+                          HELP-NO MANUAL MANUAL-NO INITIAL-VALUE)
+
+Create and return a pair of boolean options, suitable for use in an interface.
+
+  This function reduces some of the boilerplate when creating two `option`s for
+  boolean values, e.g. `--foo` and `--no-foo`.  It will try to guess at an
+  appropriate name, long option, short option, and result key, but you can
+  override them with the `…-no` keyword options as needed.
+
+  The two options will be returned as two separate values — you can use
+  `defparameters` to conveniently bind them to two separate variables if
+  desired.
+
+  Example:
+
+    (defparameters (*option-debug* *option-no-debug*)
+      (make-boolean-options 'debug
+        :long "debug"
+        :short #d
+        :help "Enable the Lisp debugger."
+        :help-no "Disable the Lisp debugger (the default)."))
+
+    ;; is roughly equivalent to:
+
+    (defparameter *option-debug*
+      (make-option 'debug
+        :long "debug"
+        :short #d
+        :help "Enable the Lisp debugger."
+        :initial-value nil
+        :reduce (constantly t))
+
+    (defparameter *option-no-debug*
+      (make-option 'no-debug
+        :long "no-debug"
+        :short #D
+        :help "Disable the Lisp debugger (the default)."
+        :reduce (constantly nil))
 
   
 

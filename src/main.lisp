@@ -202,6 +202,107 @@
   (typep object 'option))
 
 
+(defmacro defparameters (parameters values-form)
+  "Convenience macro for `defparameter`ing multiple variables at once.
+
+  `parameters` must be a list of special variable names suitable for giving to
+  `defparameter`.
+
+  `values-form` must be an expression that returns as many values as parameters
+  in the parameter list.  Each parameter will be set to the corresponding value.
+
+  This can be handy when using `make-boolean-options` to create two `option`s at
+  once and assign them to special variables.
+
+  Examples:
+
+    (defparameters (*a* *b*) (truncate 100 3))
+    (list *a* *b*)
+    ; =>
+    ; (33 1)
+
+    (defparameters (*option-foo* *option-no-foo*)
+      (make-boolean-options 'foo
+        :help \"Foo the widgets during the run.\"
+        :help-no \"Do not foo the widgets during the run (the default).\"
+        :long \"foo\"
+        :short #\f))
+
+  "
+  `(progn
+     ,@(loop :for parameter :in parameters
+             :collect `(defparameter ,parameter nil))
+     (setf (values ,@parameters) ,values-form)
+     ',parameters))
+
+(defun make-boolean-options
+    (name &key
+     (name-no (intern (concatenate 'string (string 'no-) (string name))))
+     long
+     (long-no (when long (format nil "no-~A" long)))
+     short
+     (short-no (when short (char-upcase short)))
+     (result-key name)
+     help
+     help-no
+     manual
+     manual-no
+     initial-value)
+  "Create and return a pair of boolean options, suitable for use in an interface.
+
+  This function reduces some of the boilerplate when creating two `option`s for
+  boolean values, e.g. `--foo` and `--no-foo`.  It will try to guess at an
+  appropriate name, long option, short option, and result key, but you can
+  override them with the `…-no` keyword options as needed.
+
+  The two options will be returned as two separate values — you can use
+  `defparameters` to conveniently bind them to two separate variables if
+  desired.
+
+  Example:
+
+    (defparameters (*option-debug* *option-no-debug*)
+      (make-boolean-options 'debug
+        :long \"debug\"
+        :short #\d
+        :help \"Enable the Lisp debugger.\"
+        :help-no \"Disable the Lisp debugger (the default).\"))
+
+    ;; is roughly equivalent to:
+
+    (defparameter *option-debug*
+      (make-option 'debug
+        :long \"debug\"
+        :short #\d
+        :help \"Enable the Lisp debugger.\"
+        :initial-value nil
+        :reduce (constantly t))
+
+    (defparameter *option-no-debug*
+      (make-option 'no-debug
+        :long \"no-debug\"
+        :short #\D
+        :help \"Disable the Lisp debugger (the default).\"
+        :reduce (constantly nil))
+
+  "
+  (values (adopt:make-option name
+            :result-key result-key
+            :long long
+            :short short
+            :help help
+            :manual manual
+            :initial-value initial-value
+            :reduce (constantly t))
+          (adopt:make-option name-no
+            :result-key result-key
+            :long long-no
+            :short short-no
+            :help help-no
+            :manual manual-no
+            :reduce (constantly nil))))
+
+
 (defclass* group
   name title help manual options)
 

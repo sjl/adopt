@@ -37,7 +37,8 @@ something like:
 `make-interface` takes several required arguments:
 
 * `:name` is the name of the program.
-* `:summary` is a concise one-line summary of what it does.
+* `:summary` is a concise one-line summary of what it does.  By convention it
+  should not be a full sentence, but just a snippet of text.
 * `:usage` is a UNIX-style the command line usage string.
 * `:help` is a longer description of the program.
 
@@ -240,21 +241,21 @@ inside it with `adopt:make-option`:
     (defparameter *option-version*
       (adopt:make-option 'version
         :long "version"
-        :help "display version information and exit"
+        :help "Display version and exit."
         :reduce (constantly t)))
 
     (defparameter *option-help*
       (adopt:make-option 'help
         :long "help"
         :short #\h
-        :help "display help information and exit"
+        :help "Display help and exit."
         :reduce (constantly t)))
 
     (defparameter *option-literal*
       (adopt:make-option 'literal
         :long "literal"
         :short #\l
-        :help "treat PATTERN as a literal string instead of a regular expression"
+        :help "Treat PATTERN as a literal string instead of a regular expression."
         :reduce (constantly t)))
 
     (defparameter *ui*
@@ -280,15 +281,20 @@ Adopt will automatically add the options to the help text:
     ; Search the contents of …
     ;
     ; Options:
-    ;   --version             display version information and exit
-    ;   -h, --help            display help information and exit
-    ;   -l, --literal         treat PATTERN as a literal string instead of a regular
-    ;                         expression
+    ;   --version             Display version and exit.
+    ;   -h, --help            Display help and exit.
+    ;   -l, --literal         Treat PATTERN as a literal string instead of a regular
+    ;                         expression.
 
 The first argument to `make-option` is the name of the option, which we'll see
 put to use shortly.  At least one of `:short` and `:long` is required, and
 `:help` text must be specified.  We'll talk more about `:reduce` in a little
 while, but it too is required.
+
+When writing `:help` text I recommend using a full sentence, starting with
+a capital letter and ending with appropriate punctuation.  If there's a default
+value or behavior for the option, mention it in the help text with something
+like `Search at most N lines (default 100).`.
 
 I prefer to define each option as its own global variable to keep the call to
 `make-interface` from getting too large and unwieldy, but feel free to do
@@ -341,7 +347,7 @@ hash table are (by default) the option names given as the first argument to
         :result-key 'pattern-is-literal
         :long "literal"
         :short #\l
-        :help "treat PATTERN as a literal string instead of a regular expression"
+        :help "Treat PATTERN as a literal string instead of a regular expression."
         :reduce (constantly t)))
 
     ;; …
@@ -484,7 +490,7 @@ something like:
       (adopt:make-option 'help
         :long "help"
         :short #\h
-        :help "display help information and exit"
+        :help "Display help and exit."
         :initial-value nil
         :reduce (lambda (current-value)
                   (declare (ignore current-value))
@@ -499,7 +505,7 @@ function, you can do this more concisely:
       (adopt:make-option 'help
         :long "help"
         :short #\h
-        :help "display help information and exit"
+        :help "Display help and exit."
         :reduce (constantly t)))
 
 ### Boolean Options
@@ -512,7 +518,7 @@ results, you can use `:result-key` to do this:
       (adopt:make-option 'paginate
         :long "paginate"
         :short #\p
-        :help "turn pagination on"
+        :help "Turn pagination on."
         :reduce (constantly t)))
 
     (defparameter *option-no-paginate*
@@ -520,7 +526,7 @@ results, you can use `:result-key` to do this:
         :result-key 'paginate
         :long "no-paginate"
         :short #\P
-        :help "turn pagination off (the default)"
+        :help "Turn pagination off (the default)."
         :reduce (constantly nil)))
 
 The way we've written this, if the user gives multiple options the last-given
@@ -540,6 +546,44 @@ If the last-given option didn't take precedence, they'd have to fall back to the
 non-alias version of the command, and type out all the options they *do* want by
 hand.  This is annoying, so it's usually better to let the last one win.
 
+Making two separate options by hand can be tedious if you have a lot of boolean
+options, so Adopt provides a `make-boolean-options` function that will do some
+of the boilerplate for you:
+
+    :::lisp
+    (adopt:make-boolean-options 'paginate
+      :long "paginate"
+      :short #\p
+      :help "Turn pagination on."
+      :help-no "Turn pagination off (the default).")
+    ;; =>
+    #<ADOPT::OPTION PAGINATE p/paginate>
+    #<ADOPT::OPTION NO-PAGINATE P/no-paginate>
+
+`make-boolean-options` will try to guess at sensible values to reduce the
+boilerplate you need to type:
+
+* If `:long` is `"foo"` for the true option, the false option will be `"no-foo"`
+  unless overridden by `:long-no`.
+* If `:short` is `#\f` for the true option, the false option will be
+  `(char-upcase #\f)` unless overridden by `:short-no`.
+* The given option name (e.g. `foo`) will be used for the true option, and
+  a symbol with `no-` prepended (e.g. `no-foo`) will be used for the false
+  option unless overridden by `:name-no`.
+* `:initial-value` will be `nil` for the pair if not given.
+
+The two options are returned as separate `values`.  Adopt also provides
+a `defparameters` convenience macro to create special variables for them more
+easily:
+
+    :::lisp
+    (defparameters (*option-paginate* *option-no-paginate*)
+      (adopt:make-boolean-options 'paginate
+        :long "paginate"
+        :short #\p
+        :help "Turn pagination on."
+        :help-no "Turn pagination off (the default)."))
+
 ### Counting Options
 
 To define an option that counts how many times it's been given, like SSH's `-v`,
@@ -549,7 +593,7 @@ you can use something like this:
     (defparameter *option-verbosity*
       (adopt:make-option 'verbosity
         :short #\v
-        :help "output more verbose logs"
+        :help "Output more verbose logs."
         :initial-value 0
         :reduce #'1+))
 
@@ -564,7 +608,7 @@ you can do something like:
         :parameter "PATTERN"
         :long "repository"
         :short #\R
-        :help "path to the repository (default .)"
+        :help "Path to the repository (default .)."
         :initial-value "."
         :reduce (lambda (prev new)
                   (declare (ignore prev))
@@ -583,7 +627,7 @@ exactly that:
       (adopt:make-option 'repository
         :long "repository"
         :short #\R
-        :help "path to the repository (default .)"
+        :help "Path to the repository (default .)."
         :initial-value "."
         :reduce #'adopt:last))
 
@@ -597,7 +641,7 @@ strategy could be:
       (adopt:make-option 'exclude
         :long "exclude"
         :parameter "PATTERN"
-        :help "exclude PATTERN (may be given multiple times)"
+        :help "Exclude PATTERN (may be given multiple times)."
         :initial-value nil
         :reduce (lambda (patterns new)
                   (cons new patterns))))
@@ -612,7 +656,7 @@ so Adopt provides it:
       (adopt:make-option 'exclude
         :long "exclude"
         :parameter "PATTERN"
-        :help "exclude PATTERN (may be given multiple times)"
+        :help "Exclude PATTERN (may be given multiple times)."
         :initial-value nil
         :reduce (adopt:flip #'cons)))
 
@@ -628,7 +672,7 @@ problem.  The first is to add the parameter to the end of the list in the
       (adopt:make-option 'exclude
         :long "exclude"
         :parameter "PATTERN"
-        :help "exclude PATTERN (may be given multiple times)"
+        :help "Exclude PATTERN (may be given multiple times)."
         :initial-value nil
         :reduce (lambda (patterns new)
                   (append patterns (list new)))))
@@ -644,7 +688,7 @@ either):
       (adopt:make-option 'exclude
         :long "exclude"
         :parameter "PATTERN"
-        :help "exclude PATTERN (may be given multiple times)"
+        :help "Exclude PATTERN (may be given multiple times)."
         :reduce #'adopt:collect))
 
 A more efficient (though slightly uglier) solution would be to use `nreverse` at
@@ -655,7 +699,7 @@ the end:
       (adopt:make-option 'exclude
         :long "exclude"
         :parameter "PATTERN"
-        :help "exclude PATTERN (may be given multiple times)"
+        :help "Exclude PATTERN (may be given multiple times)."
         :reduce (adopt:flip #'cons)
         :finally #'nreverse))
 
@@ -698,14 +742,14 @@ help you make a command line interface with all the fixins:
     :::lisp
     (defparameter *option-help*
       (adopt:make-option 'help
-        :help "display help and exit"
+        :help "Display help and exit."
         :long "help"
         :short #\h
         :reduce (constantly t)))
 
     (defparameter *option-literal*
       (adopt:make-option 'literal
-        :help "treat PATTERN as a literal string instead of a regex"
+        :help "Treat PATTERN as a literal string instead of a regex."
         :long "literal"
         :short #\l
         :reduce (constantly t)))
@@ -713,14 +757,14 @@ help you make a command line interface with all the fixins:
     (defparameter *option-no-literal*
       (adopt:make-option 'no-literal
         :result-key 'literal
-        :help "treat PATTERN as a regex (the default)"
+        :help "Treat PATTERN as a regex (the default)."
         :long "no-literal"
         :short #\L
         :reduce (constantly nil)))
 
     (defparameter *option-case-sensitive*
       (adopt:make-option 'case-sensitive
-        :help "match case-sensitively (the default)"
+        :help "Match case-sensitively (the default)."
         :long "case-sensitive"
         :short #\c
         :initial-value t
@@ -728,7 +772,7 @@ help you make a command line interface with all the fixins:
 
     (defparameter *option-case-insensitive*
       (adopt:make-option 'case-insensitive
-        :help "ignore case when matching"
+        :help "Ignore case when matching."
         :long "case-insensitive"
         :short #\C
         :result-key 'case-sensitive
@@ -736,13 +780,13 @@ help you make a command line interface with all the fixins:
 
     (defparameter *option-color*
       (adopt:make-option 'color
-        :help "highlight matches with color"
+        :help "Highlight matches with color."
         :long "color"
         :reduce (constantly t)))
 
     (defparameter *option-no-color*
       (adopt:make-option 'no-color
-        :help "don't highlight matches (the default)"
+        :help "Don't highlight matches (the default)."
         :long "no-color"
         :result-key 'color
         :reduce (constantly nil)))
@@ -750,7 +794,7 @@ help you make a command line interface with all the fixins:
     (defparameter *option-context*
       (adopt:make-option 'context
         :parameter "N"
-        :help "show N lines of context (default 0)"
+        :help "Show N lines of context (default 0)."
         :long "context"
         :short #\U
         :initial-value 0
@@ -852,7 +896,7 @@ option that wasn't defined in the interface:
                           :parameter "N"
                           :long "times"
                           :initial-value 1
-                          :help "say meow N times (default 1)"
+                          :help "Say meow N times (default 1)."
                           :reduce #'adopt:last
                           :key #'parse-integer))))
 
@@ -923,7 +967,7 @@ option in the help text, but elaborate more in the manual), you can use the
       (adopt:make-option 'exclude
         :long "exclude"
         :parameter "PATTERN"
-        :help "exclude PATTERN"
+        :help "Exclude PATTERN."
         :manual "Exclude lines that match PATTERN (a PERL-compatible regular expression) from the search results.  Multiple PATTERNs can be specified by giving this option multiple times."
         :reduce (adopt:flip #'cons)))
 

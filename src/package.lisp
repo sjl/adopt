@@ -2,8 +2,10 @@
   (:use :cl)
   (:export
     :define-string
+    :defparameters
 
     :make-option
+    :make-boolean-options
     :make-group
     :make-interface
 
