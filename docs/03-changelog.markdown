@@ -5,6 +5,11 @@ Here's the list of changes in each released version.
 
 [TOC]
 
+1.1.1
+-----
+
+Fix `parse-options-or-exit` to pass along arguments properly.
+
 1.1.0
 -----
 
