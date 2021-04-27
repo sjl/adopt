@@ -600,7 +600,7 @@
   See the full documentation for more information.
 
   "
-  (handler-case (adopt:parse-options interface)
+  (handler-case (adopt:parse-options interface arguments)
     (error (c) (adopt:print-error-and-exit c))))
 
 
