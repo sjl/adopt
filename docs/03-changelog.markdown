@@ -5,6 +5,11 @@ Here's the list of changes in each released version.
 
 [TOC]
 
+1.2.0
+-----
+
+Add Lispworks support to `argv` and `exit`.
+
 1.1.1
 -----
 

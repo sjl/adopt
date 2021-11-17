@@ -64,8 +64,10 @@
   #+ccl (destructuring-bind (program-name &rest arguments)
             ccl:*command-line-argument-list*
             (cons program-name (rest (member "--" arguments :test #'string=))))
+  #+lispworks sys:*line-arguments-list*
   ;; #+ecl (ext:command-args)
-  #-(or sbcl ccl ecl) (error "ARGV is not supported on this implementation."))
+  #-(or sbcl ccl ecl lispworks)
+  (error "ARGV is not supported on this implementation."))
 
 (defun exit (&optional (code 0))
   "Exit the program with status `code`.
@@ -77,7 +79,8 @@
   "
   #+sbcl (sb-ext:exit :code code)
   #+ccl (ccl:quit code)
-  #-(or sbcl ccl) (error "EXIT is not supported on this implementation."))
+  #+lispworks (lispworks:quit :status code :ignore-errors-p t)
+  #-(or sbcl ccl lispworks) (error "EXIT is not supported on this implementation."))
 
 
 (defun funcall% (value function)
