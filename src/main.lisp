@@ -61,12 +61,13 @@
 
   "
   #+sbcl sb-ext:*posix-argv*
+  #+abcl ext:*command-line-argument-list*
   #+ccl (destructuring-bind (program-name &rest arguments)
             ccl:*command-line-argument-list*
-            (cons program-name (rest (member "--" arguments :test #'string=))))
+          (cons program-name (rest (member "--" arguments :test #'string=))))
   #+lispworks sys:*line-arguments-list*
-  ;; #+ecl (ext:command-args)
-  #-(or sbcl ccl ecl lispworks)
+  #+ecl (loop :for i :from 0 :below (si:argc) :collect (si:argv i))
+  #-(or sbcl abcl ccl ecl lispworks)
   (error "ARGV is not supported on this implementation."))
 
 (defun exit (&optional (code 0))
@@ -77,10 +78,11 @@
   `print-error-and-exit` if it's not implemented for your particular Lisp.
 
   "
+  #-(or sbcl ccl abcl lispworks) (error "~S is not supported on this implementation." 'exit)
   #+sbcl (sb-ext:exit :code code)
   #+ccl (ccl:quit code)
-  #+lispworks (lispworks:quit :status code :ignore-errors-p t)
-  #-(or sbcl ccl lispworks) (error "EXIT is not supported on this implementation."))
+  #+abcl (ext:quit :status code)
+  #+lispworks (lispworks:quit :status code :ignore-errors-p t))
 
 
 (defun funcall% (value function)
@@ -107,10 +109,20 @@
              :collect `(check-type ,place ,type))))
 
 
+#+ccl
+(defun ccl-break-hook (cond hook)
+  "SIGINT handler on CCL."
+  ;; https://github.com/compufox/with-user-abort/blob/master/main.lisp
+  (declare (ignore hook))
+  (signal cond))
+
 (defmacro quit-on-ctrl-c ((&key (code 130)) &body body)
-  `(handler-case
-     (progn ,@body)
-     #+sbcl (sb-sys:interactive-interrupt () (adopt:exit ,code))))
+  #-(or abcl sbcl ccl) (error "~S is not supported on this implementation" 'quit-on-ctrl-c)
+  #+abcl (declare (ignore code)) ; ABCL seems to quit on ctrl-c on its own.
+  `(let (#+ccl (ccl:*break-hook* #'ccl-break-hook))
+     (handler-case (progn ,@body)
+       #+sbcl (sb-sys:interactive-interrupt () (adopt:exit ,code))
+       #+ccl (ccl:interrupt-signal-condition () (adopt:exit ,code)))))
 
 
 ;;;; Definition ---------------------------------------------------------------
