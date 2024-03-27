@@ -1,4 +1,4 @@
-.PHONY: test test-sbcl test-ccl test-ecl test-abcl test-clasp pubdocs
+.PHONY: test test-sbcl test-ccl test-ecl test-abcl pubdocs
 
 heading_printer = $(shell which heading || echo 'true')
 sourcefiles = $(shell ffind --full-path --literal .lisp)
@@ -6,7 +6,7 @@ docfiles = $(shell ls docs/*.markdown)
 apidocs = $(shell ls docs/*reference*.markdown)
 
 # Testing ---------------------------------------------------------------------
-test: test-sbcl test-ccl test-ecl test-abcl test-clasp
+test: test-sbcl test-ccl test-ecl test-abcl
 
 test-sbcl:
 	$(heading_printer) computer 'SBCL'
@@ -23,10 +23,6 @@ test-ecl:
 test-abcl:
 	$(heading_printer) broadway 'ABCL'
 	time abcl --load test/run.lisp
-
-test-clasp:
-	$(heading_printer) o8 'CLASP'
-	time clasp --load test/run.lisp
 
 # Documentation ---------------------------------------------------------------
 $(apidocs): $(sourcefiles)
