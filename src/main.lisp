@@ -78,7 +78,8 @@
   `print-error-and-exit` if it's not implemented for your particular Lisp.
 
   "
-  #-(or sbcl ccl abcl lispworks) (error "~S is not supported on this implementation." 'exit)
+  #-(or ecl sbcl ccl abcl lispworks) (error "~S is not supported on this implementation." 'exit)
+  #+ecl (si:exit code)
   #+sbcl (sb-ext:exit :code code)
   #+ccl (ccl:quit code)
   #+abcl (ext:quit :status code)
