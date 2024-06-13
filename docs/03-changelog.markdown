@@ -5,6 +5,11 @@ Here's the list of changes in each released version.
 
 [TOC]
 
+1.3.0
+-----
+
+Add ECL support to `exit` (thanks Dmitry Solomennnikov).
+
 1.2.0
 -----
 
