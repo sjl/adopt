@@ -29,7 +29,7 @@ $(apidocs): $(sourcefiles)
 	sbcl --noinform --load docs/api.lisp  --eval '(quit)'
 
 docs/build/index.html: $(docfiles) $(apidocs) docs/title
-	cd docs && ~/.virtualenvs/d/bin/d
+	cd docs && ~/bin/venvs/tools/bin/d
 
 docs: docs/build/index.html
 
