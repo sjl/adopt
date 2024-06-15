@@ -378,7 +378,10 @@
   long-options
   usage
   help
-  manual)
+  manual
+  usage-string
+  options-string
+  examples-string)
 
 (defmethod print-object ((i interface) stream)
   (print-unreadable-object (i stream :type t)
@@ -387,7 +390,7 @@
             (length (options i))
             (length (groups i)))))
 
-(defun make-interface (&key name summary usage help manual examples contents)
+(defun make-interface (&key name summary usage help manual examples contents usage-string options-string)
   "Create and return a command line interface.
 
   This function takes a number of arguments that define how the interface is
@@ -400,6 +403,10 @@
   * `manual` (optional): a string to use in place of `help` when rendering a man page.
   * `examples` (optional): an alist of `(prose . command)` conses to render as a list of examples.
   * `contents` (optional): a list of options and groups.  Ungrouped options will be collected into a single top-level group.
+  * `usage-string` (optional): a string to use as a 'USAGE' line (may be used for localization)
+  * `options-string` (optional): a string to use as a 'Options' line (may be used for localization)
+  * `examples-string` (optional): a string to use as a 'Examples' line (may be used for localization)
+
 
   See the full documentation for more information.
 
@@ -410,7 +417,10 @@
                help string
                manual (or null string)
                examples list
-               contents list)
+               contents list
+               usage-string (or null string)
+               options-string (or null string)
+               examples-string (or null string))
   (let* ((ungrouped-options (remove-if-not #'optionp contents))
          (groups (cons (make-default-group ungrouped-options)
                        (remove-if-not #'groupp contents)))
@@ -418,6 +428,9 @@
          (interface (make-instance 'interface
                       :name name
                       :usage usage
+                      :usage-string (or usage-string "USAGE")
+                      :options-string (or options-string "Options")
+                      :examples-string (or examples-string "Examples")
                       :summary summary
                       :help help
                       :manual manual
@@ -709,12 +722,12 @@
     "WIDTH (~D) must be at least 4 greater than OPTION-WIDTH (~D)"
     width option-width)
   (format stream "~A - ~A~2%" (name interface) (summary interface))
-  (format stream "USAGE: ~A ~A~2%" program-name (usage interface))
+  (format stream "~A: ~A ~A~2%" (usage-string interface) program-name (usage interface))
   (format stream (bobbin:wrap (help interface) width))
   (format stream "~%")
   (dolist (group (groups interface))
     (when (or (options group) (help group))
-      (format stream "~%~A:~%" (or (title group) (name group) "Options"))
+      (format stream "~%~A:~%" (or (title group) (name group) (options-string interface)))
       (let* ((help (help group))
              (help-column 2)
              (help-width (- width help-column))
@@ -731,7 +744,7 @@
          (example-column 2)
          (example-width (- width example-column)))
     (when (and examples include-examples)
-      (format stream "~%Examples:~%")
+      (format stream "~%~A:~%" (examples-string interface))
       (loop :for (prose . command) :in examples :do
             (format stream "~%~{  ~A~^~%~}~2%      ~A~%"
                     (bobbin:wrap (list prose) example-width)
