@@ -390,7 +390,7 @@
             (length (options i))
             (length (groups i)))))
 
-(defun make-interface (&key name summary usage help manual examples contents usage-string options-string)
+(defun make-interface (&key name summary usage help manual examples contents usage-string options-string examples-string)
   "Create and return a command line interface.
 
   This function takes a number of arguments that define how the interface is
