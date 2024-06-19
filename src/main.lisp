@@ -777,11 +777,13 @@
               :include-examples include-examples)
   (funcall exit-function exit-code))
 
+(defparameter *error-string* "error")
+
 (defun print-error-and-exit (error &key
                              (stream *error-output*)
                              (exit-function #'exit)
                              (exit-code 1)
-                             (prefix "error: "))
+                             (prefix (format nil "~A: " *error-string*)))
   "Print `prefix` and `error` to `stream` and exit.
 
   Example:
