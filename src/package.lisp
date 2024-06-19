@@ -31,5 +31,7 @@
     :first
     :last
 
+    :*error-string*
+
     )
   (:shadow :collect :reduce :first :last))
