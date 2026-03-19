@@ -557,7 +557,7 @@
   (invoke-restart (find-restart 'supply-new-value condition) value))
 
 
-(defun parse-options (interface &optional (arguments (rest (argv))))
+(defun parse-options (interface &optional (arguments (rest (argv))) stop-at-first-toplevel)
   "Parse `arguments` according to `interface`.
 
   Two values are returned:
@@ -584,7 +584,10 @@
                        ((terminatorp arg) (dolist (r remaining) (push r toplevel)))
                        ((shortp arg) (parse-short interface results arg remaining))
                        ((longp arg) (parse-long interface results arg remaining))
-                       (t (push arg toplevel) remaining))
+                       (t (push arg toplevel)
+			  (if stop-at-first-toplevel
+			      (cons "--" remaining)
+			      remaining)))
                    (discard-option ()
                      :test unrecognized-option-p
                      :report "Discard the unrecognized option."
@@ -601,7 +604,7 @@
                      (cons v remaining))))))))
       (recur arguments))))
 
-(defun parse-options-or-exit (interface &optional (arguments (rest (argv))))
+(defun parse-options-or-exit (interface &optional (arguments (rest (argv))) stop-at-first-toplevel)
   "Parse `arguments` according to `interface`, exiting if any error occurs.
 
   Two values are returned:
@@ -616,7 +619,7 @@
   See the full documentation for more information.
 
   "
-  (handler-case (adopt:parse-options interface arguments)
+  (handler-case (adopt:parse-options interface arguments stop-at-first-toplevel)
     (error (c) (adopt:print-error-and-exit c))))
 
 
