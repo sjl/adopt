@@ -16,6 +16,7 @@
     :print-help-and-exit
     :print-error-and-exit
     :print-manual
+    :print-fish-completions
 
     :argv
     :exit

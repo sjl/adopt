@@ -132,13 +132,15 @@
   result-key
   help
   manual
+  terse
   short
   long
   parameter
   initial-value
   key
   finally
-  reduce)
+  reduce
+  hidden)
 
 (defmethod print-object ((o option) stream)
   (print-unreadable-object (o stream :type t)
@@ -149,7 +151,9 @@
                     short
                     help
                     manual
+                    terse
                     parameter
+                    hidden
                     reduce
                     ;; can't just default to nil because multiple options might
                     ;; have the same result key, and only one can provide init
@@ -168,6 +172,7 @@
   * `long` (optional): a string for the long form of the option (e.g. `--foo`).
   * `short` (optional): a character for the short form of the option (e.g. `-f`).  At least one of `short` and `long` must be given.
   * `manual` (optional): a string to use in place of `help` when rendering a man page.
+  * `terse` (optional): a string to use in place of `help` when rendering a terse summary (e.g. fish completions).
   * `parameter` (optional): a string.  If given, it will turn this option into a parameter-taking option (e.g. `--foo=bar`) and will be used as a placeholder
   in the help text.
   * `reduce` (**required**): a function designator that will be called every time the option is specified by the user.
@@ -199,16 +204,19 @@
                long (or null string)
                help string
                manual (or null string)
+               terse (or null string)
                parameter (or null string))
   (apply #'make-instance 'option
     :name name
     :result-key result-key
     :help help
     :manual manual
+    :terse terse
     :long long
     :short short
     :parameter parameter
     :reduce reduce
+    :hidden hidden
     :key key
     :finally finally
     (when initial-value?
@@ -262,7 +270,9 @@
      help
      help-no
      manual
+     terse
      manual-no
+     terse-no
      initial-value)
   "Create and return a pair of boolean options, suitable for use in an interface.
 
@@ -308,6 +318,7 @@
             :short short
             :help help
             :manual manual
+            :terse terse
             :initial-value initial-value
             :reduce (constantly t))
           (adopt:make-option name-no
@@ -316,17 +327,18 @@
             :short short-no
             :help help-no
             :manual manual-no
+            :terse terse-no
             :reduce (constantly nil))))
 
 
 (defclass* group
-  name title help manual options)
+  name title help manual options hidden)
 
 (defmethod print-object ((g group) stream)
   (print-unreadable-object (g stream :type t)
     (format stream "~A (~D options)" (name g) (length (options g)))))
 
-(defun make-group (name &key title help manual options)
+(defun make-group (name &key title help manual options hidden)
   "Create and return an option group, suitable for use in an interface.
 
   This function takes a number of arguments that define how the group is
@@ -354,6 +366,7 @@
     :title title
     :help help
     :manual manual
+    :hidden hidden
     :options options))
 
 (defun make-default-group (options)
@@ -362,6 +375,7 @@
     :title nil
     :help nil
     :manual nil
+    :hidden nil
     :options options))
 
 (defun groupp (object)
@@ -668,7 +682,8 @@
                    (program-name (car (argv)))
                    (width 80)
                    (option-width 20)
-                   (include-examples t))
+                   (include-examples t)
+                   (include-hidden nil))
   "Print a pretty help document for `interface` to `stream`.
 
   `width` should be the total width (in characters) for line-wrapping purposes.
@@ -712,7 +727,9 @@
   (format stream "USAGE: ~A ~A~2%" program-name (usage interface))
   (format stream (bobbin:wrap (help interface) width))
   (format stream "~%")
-  (dolist (group (groups interface))
+  (dolist (group (if include-hidden
+                   (groups interface)
+                   (remove-if #'hidden (groups interface))))
     (when (or (options group) (help group))
       (format stream "~%~A:~%" (or (title group) (name group) "Options"))
       (let* ((help (help group))
@@ -725,7 +742,9 @@
         (when help
           (format stream "~{  ~A~^~%~}~2%"
                   (bobbin:wrap (list help) help-width)))
-        (dolist (option (options group))
+        (dolist (option (if include-hidden
+                          (options group)
+                          (remove-if #'hidden (options group))))
           (print-option-help stream option option-column doc-column doc-width)))))
   (let* ((examples (examples interface))
          (example-column 2)
@@ -744,6 +763,7 @@
      (width 80)
      (option-width 20)
      (include-examples t)
+     (include-hidden nil)
      (exit-function #'exit)
      (exit-code 0))
   "Print a pretty help document for `interface` to `stream` and exit.
@@ -761,7 +781,8 @@
               :program-name program-name
               :width width
               :option-width option-width
-              :include-examples include-examples)
+              :include-examples include-examples
+              :include-hidden include-hidden)
   (funcall exit-function exit-code))
 
 (defun print-error-and-exit (error &key
@@ -782,6 +803,12 @@
   "
   (format stream "~A~A~%" (or prefix "") error)
   (funcall exit-function exit-code))
+
+(defun print-usage (interface &key
+                    (stream *error-output*)
+                    (program-name (car (argv)))
+                    (prefix "USAGE: "))
+  (format stream "~A~A ~A~%" prefix program-name (usage interface)))
 
 
 ;;;; Man ----------------------------------------------------------------------
@@ -824,7 +851,8 @@
 
 (defun print-manual (interface &key
                      (stream *standard-output*)
-                     (manual-section 1))
+                     (manual-section 1)
+                     (include-hidden nil))
   "Print a troff-formatted man page for `interface` to `stream`.
 
   Example:
@@ -872,9 +900,13 @@
                          (help group))))
            (when desc
              (fa (split-paragraphs desc))))
-         (map nil #'print-option (options group)))
+         (map nil #'print-option (if include-hidden
+                                   (options group)
+                                   (remove-if #'hidden (options group)))))
        (print-groups ()
-         (map nil #'print-group (groups interface)))
+         (map nil #'print-group (if include-hidden
+                                  (groups interface)
+                                  (remove-if #'hidden (groups interface)))))
        (print-example (prose command prefix)
          (f prefix)
          (fa (escape prose))
@@ -892,6 +924,121 @@
     (print-header)
     (print-name)
     (print-synopsis)
+    (print-description)
+    (print-groups)
+    (print-examples)))
+
+
+;;;; Markdown -----------------------------------------------------------------
+(defun escape/md (string)
+  (if (zerop (length string))
+    ""
+    (with-output-to-string (s)
+      (loop :for char :across string :do
+            (when (find char "\\`*_{}[]()#+-.!")
+              (write-char #\\ s))
+            (write-char char s)))))
+
+(defun option/md (option)
+  (let ((short (short option))
+        (long (long option))
+        (parameter (parameter option)))
+    (labels
+        ((short-option ()
+           (when short
+             (if parameter
+               (format nil "`-~A ~A`" short parameter)
+               (format nil "`-~A`" short))))
+         (long-option ()
+           (when long
+             (if parameter
+               (format nil "`--~A=~A`" long parameter)
+               (format nil "`--~A`" long)))))
+      (format nil "~{~A~^, ~}"
+              (remove nil (list (short-option) (long-option)))))))
+
+
+(defun print-manual/md (interface &key
+                        (stream *standard-output*)
+                        (width 80)
+                        (include-hidden nil))
+  "Print a markdown-formatted man page for `interface` to `stream`.
+
+  Example:
+
+    (with-open-file (manual \"manual.markdown\"
+                            :direction :output
+                            :if-exists :supersede)
+      (print-manual *ui* manual))
+
+  "
+  (labels
+      ((f (&rest args)
+         (apply #'format stream args)
+         (terpri stream))
+       (fa (string-or-list)
+         (if (listp string-or-list)
+           (map nil #'fa string-or-list)
+           (f "~A" string-or-list)))
+       (nl ()
+         (terpri stream))
+       (indent (strings)
+         (loop :for line in strings
+               :collect (if (string= "" line)
+                          line
+                          (concatenate 'string "    " line))))
+       (print-header ()
+         (f "# ~A~%" (escape (name interface))))
+       (print-usage ()
+         (f "USAGE: `~A ~A`~%"
+            (escape (name interface))
+            (escape (usage interface))))
+       (print-description ()
+         (fa (split-paragraphs (bobbin:wrap (or (manual interface)
+                                                (help interface))
+                                            width)
+                               :delimiter ""))
+         (nl))
+       (print-option (option)
+         (f "*   ~A" (option/md option))
+         (let ((desc (or (manual option) (help option))))
+           (when desc
+             (nl)
+             (fa (indent (split-paragraphs
+                           (bobbin:wrap desc (- width 4))
+                           :delimiter "")))))
+         (nl))
+       (print-group (group)
+         (let ((name (or (title group) (name group))))
+           (when name
+             (f "### ~A~%" (escape name))))
+         (let ((desc (or (manual group)
+                         (help group))))
+           (when desc
+             (fa (bobbin:wrap (split-paragraphs desc) width))
+             (nl)))
+         (map nil #'print-option (if include-hidden
+                                   (options group)
+                                   (remove-if #'hidden (options group))))
+         (nl))
+       (print-groups ()
+         (f "## Options~%")
+         (map nil #'print-group (if include-hidden
+                                  (groups interface)
+                                  (remove-if #'hidden (groups interface)))))
+       (print-example (prose command)
+         (fa (bobbin:wrap (escape prose) width))
+         (nl)
+         (fa (indent (list command)))
+         (nl))
+       (print-examples ()
+         (let ((examples (examples interface)))
+           (when examples
+             (f "## Examples~%")
+             (loop :for (prose . command) :in examples
+                   :do (print-example prose command))))))
+    (print-header)
+    (print-usage)
     (print-description)
     (print-groups)
     (print-examples)))

@@ -13,7 +13,8 @@
   :serial t
   :components ((:module "src" :serial t
                 :components ((:file "package")
-                             (:file "main")))))
+                             (:file "main")
+                             (:file "fish")))))
 
 
 (asdf:defsystem :adopt/test
