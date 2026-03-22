@@ -173,7 +173,7 @@
   * `reduce` (**required**): a function designator that will be called every time the option is specified by the user.
   * `initial-value` (optional): a value to use as the initial value of the option.
   * `key` (optional): a function designator, only allowed for parameter-taking options, to be called on the values given by the user before they are passed along to the reducing function.  It will not be called on the initial value.
-  * `finally` (optional): a function designator to be called on the final result after all parsing is complete. 
+  * `finally` (optional): a function designator to be called on the final result after all parsing is complete.
 
   The manner in which the reducer is called depends on whether the option takes a parameter:
 
@@ -376,6 +376,7 @@
   groups
   short-options
   long-options
+  custom-terminatorp
   usage
   help
   manual)
@@ -387,7 +388,7 @@
             (length (options i))
             (length (groups i)))))
 
-(defun make-interface (&key name summary usage help manual examples contents)
+(defun make-interface (&key name summary usage help manual examples contents custom-terminatorp)
   "Create and return a command line interface.
 
   This function takes a number of arguments that define how the interface is
@@ -400,6 +401,7 @@
   * `manual` (optional): a string to use in place of `help` when rendering a man page.
   * `examples` (optional): an alist of `(prose . command)` conses to render as a list of examples.
   * `contents` (optional): a list of options and groups.  Ungrouped options will be collected into a single top-level group.
+  * `custom-terminatorp` (optional): a function to be called on toplevel arguments. If it returns non-nil, the current and all remaining arguments will be returned as toplevel.
 
   See the full documentation for more information.
 
@@ -425,7 +427,8 @@
                       :groups groups
                       :options options
                       :short-options (make-hash-table)
-                      :long-options (make-hash-table :test #'equal))))
+                      :long-options (make-hash-table :test #'equal)
+                      :custom-terminatorp custom-terminatorp)))
     (flet ((add-option (option)
              (let ((short (short option))
                    (long (long option)))
@@ -557,7 +560,7 @@
   (invoke-restart (find-restart 'supply-new-value condition) value))
 
 
-(defun parse-options (interface &optional (arguments (rest (argv))) stop-at-first-toplevel)
+(defun parse-options (interface &optional (arguments (rest (argv))))
   "Parse `arguments` according to `interface`.
 
   Two values are returned:
@@ -570,7 +573,8 @@
 
   "
   (let ((toplevel nil)
-        (results (make-hash-table)))
+        (results (make-hash-table))
+        (custom-terminatorp (custom-terminatorp interface)))
     (initialize-results interface results)
     (labels
         ((recur (arguments)
@@ -585,9 +589,10 @@
                        ((shortp arg) (parse-short interface results arg remaining))
                        ((longp arg) (parse-long interface results arg remaining))
                        (t (push arg toplevel)
-			  (if stop-at-first-toplevel
-			      (cons "--" remaining)
-			      remaining)))
+                          (if (and custom-terminatorp
+                                   (funcall custom-terminatorp arg))
+                              (cons "--" remaining)
+                              remaining)))
                    (discard-option ()
                      :test unrecognized-option-p
                      :report "Discard the unrecognized option."
@@ -604,7 +609,7 @@
                      (cons v remaining))))))))
       (recur arguments))))
 
-(defun parse-options-or-exit (interface &optional (arguments (rest (argv))) stop-at-first-toplevel)
+(defun parse-options-or-exit (interface &optional (arguments (rest (argv))))
   "Parse `arguments` according to `interface`, exiting if any error occurs.
 
   Two values are returned:
@@ -619,7 +624,7 @@
   See the full documentation for more information.
 
   "
-  (handler-case (adopt:parse-options interface arguments stop-at-first-toplevel)
+  (handler-case (adopt:parse-options interface arguments)
     (error (c) (adopt:print-error-and-exit c))))
 
 
