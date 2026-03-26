@@ -978,6 +978,13 @@ default `man` is usually smart enough to look next to every directory in your
 appropriate subdirectories and it should all Just Work™.  Consult the `man`
 documentation for more information.
 
+Localization notes
+------------------
+
+In general, manual can be written in any language and all text should be given in target language.
+To customize adopt output itself several one can pass localized strings to `make-inteface` in `:usage-string`, `:options-string` and `:examples-string`.
+Given strings are used instead of default ones.
+
 Implementation Specifics
 ------------------------
 
