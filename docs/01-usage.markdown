@@ -375,7 +375,12 @@ do not take any parameters, they can be mashed together and given all at once
 argument (`-n foo`) or mashed together with the option `-nfoo`.
 
 The special string `--` signals that all remaining arguments are normal text
-arguments, and should not be parsed as options.
+arguments, and should not be parsed as options. The same can be signalled using
+other strings if a function is passed with the `:custom-terminatorp` keyword
+argument of `adopt:make-interface`. Arguments not associated with any option
+will be passed to this function, and if a non-nil value results, parsing will be
+terminated. Note that while the string `--` is not returned alongside other non-
+option arguments, custom terminator strings are.
 
 Top-Level Structure
 -------------------
